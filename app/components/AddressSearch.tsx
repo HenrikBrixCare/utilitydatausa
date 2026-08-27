@@ -6,6 +6,8 @@ type Address = {
   matchedAddress: string;
   latitude: number;
   longitude: number;
+  stateAbbr: string | null;
+  countyName: string | null;
 };
 
 type Profile = {
@@ -38,14 +40,21 @@ type Profile = {
     instruction: string;
     limitation: string;
   };
-  energy: { status: string; limitation: string };
+  energy: {
+    status: string;
+    year: number;
+    state: string | null;
+    county: string | null;
+    candidateUtilities: Array<{ utility_id_eia: string | null; utility_name: string }>;
+    limitation: string;
+  };
   limitation: string;
 };
 
 function statusLabel(status: string) {
   if (status === "ok") return "LIVE";
   if (status === "no_data") return "NO DATA";
-  if (status === "limited") return "FOLLOW-UP";
+  if (status === "limited") return "COUNTY DATA";
   if (status === "planned") return "PLANNED";
   return "SOURCE ERROR";
 }
@@ -70,7 +79,14 @@ export default function AddressSearch() {
         environment: null,
         water: null,
         excavation811: null,
-        energy: { status: "planned", limitation: "Not checked." },
+        energy: {
+          status: "no_data",
+          year: 2024,
+          state: null,
+          county: null,
+          candidateUtilities: [],
+          limitation: "Not checked."
+        },
         limitation: "The address profile request failed."
       });
     } finally {
@@ -98,6 +114,9 @@ export default function AddressSearch() {
                 <div>
                   <span className="mini-label">MATCHED ADDRESS</span>
                   <strong>{result.address.matchedAddress}</strong>
+                  {(result.address.countyName || result.address.stateAbbr) && (
+                    <span>{[result.address.countyName, result.address.stateAbbr].filter(Boolean).join(", ")}</span>
+                  )}
                 </div>
                 <span>{result.address.latitude.toFixed(6)}, {result.address.longitude.toFixed(6)}</span>
               </div>
@@ -140,10 +159,19 @@ export default function AddressSearch() {
                   <p className="microcopy">{result.excavation811?.limitation}</p>
                 </article>
 
-                <article className="profile-card muted-card">
-                  <span className="badge next">PLANNED</span>
-                  <h3>Electric utility</h3>
-                  <p>EIA + state/local service-territory adapter.</p>
+                <article className="profile-card">
+                  <span className={`badge ${result.energy.status === "limited" ? "followup" : "next"}`}>{statusLabel(result.energy.status)}</span>
+                  <h3>Electric utility candidates</h3>
+                  {result.energy.status === "limited" ? (
+                    <>
+                      <p><strong>{result.energy.candidateUtilities.length}</strong> EIA-861 utilities report distribution equipment in {result.energy.county}{result.energy.state ? `, ${result.energy.state}` : ""} ({result.energy.year}).</p>
+                      {result.energy.candidateUtilities.slice(0, 4).map((utility) => (
+                        <p className="compact-item" key={`${utility.utility_id_eia}-${utility.utility_name}`}>{utility.utility_name}</p>
+                      ))}
+                    </>
+                  ) : (
+                    <p>No county-level EIA-861 candidate utility match was returned.</p>
+                  )}
                   <p className="microcopy">{result.energy.limitation}</p>
                 </article>
               </div>
