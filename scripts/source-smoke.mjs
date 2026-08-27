@@ -1,22 +1,37 @@
 const timeout = (ms = 15000) => AbortSignal.timeout(ms);
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function fetchRetry(name, url, accept, attempts = 3) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        headers: { Accept: accept, "User-Agent": "UtilityDataUSA-source-smoke/0.2" },
+        signal: timeout()
+      });
+      if (!response.ok) throw new Error(`${name}: HTTP ${response.status}`);
+      if (attempt > 1) console.log(`RECOVERED ${name} on attempt ${attempt}`);
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) {
+        console.log(`RETRY ${name} after attempt ${attempt}`);
+        await wait(1000 * attempt);
+      }
+    }
+  }
+  throw lastError;
+}
 
 async function expectJson(name, url, validate) {
-  const response = await fetch(url, {
-    headers: { Accept: "application/json", "User-Agent": "UtilityDataUSA-source-smoke/0.2" },
-    signal: timeout()
-  });
-  if (!response.ok) throw new Error(`${name}: HTTP ${response.status}`);
+  const response = await fetchRetry(name, url, "application/json");
   const data = await response.json();
   if (!validate(data)) throw new Error(`${name}: unexpected response shape`);
   console.log(`PASS ${name}`);
 }
 
 async function expectText(name, url, validate) {
-  const response = await fetch(url, {
-    headers: { Accept: "text/plain", "User-Agent": "UtilityDataUSA-source-smoke/0.2" },
-    signal: timeout()
-  });
-  if (!response.ok) throw new Error(`${name}: HTTP ${response.status}`);
+  const response = await fetchRetry(name, url, "text/plain");
   const data = await response.text();
   if (!validate(data)) throw new Error(`${name}: unexpected response shape`);
   console.log(`PASS ${name}`);
