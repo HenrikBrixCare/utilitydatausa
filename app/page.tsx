@@ -1,15 +1,21 @@
 import AddressSearch from "./components/AddressSearch";
+import { getDataSources } from "../lib/dataSources";
 
-const layers = [
-  ["Address", "LIVE", "U.S. Census Bureau geocoding"],
-  ["Flood", "NEXT", "FEMA flood hazard data"],
-  ["Environment", "NEXT", "EPA Envirofacts"],
-  ["Water", "NEXT", "USGS Water Data"],
-  ["Electric utility", "NEXT", "EIA + state/local utility data"],
-  ["Excavation", "FOLLOW-UP", "State 811 / one-call process"]
-];
+function badgeClass(status: "active" | "planned" | "limited") {
+  if (status === "active") return "live";
+  if (status === "limited") return "followup";
+  return "next";
+}
 
-export default function Home() {
+function badgeLabel(status: "active" | "planned" | "limited") {
+  if (status === "active") return "LIVE";
+  if (status === "limited") return "LIMITED";
+  return "NEXT";
+}
+
+export default async function Home() {
+  const sources = await getDataSources();
+
   return (
     <main>
       <section className="hero">
@@ -31,11 +37,12 @@ export default function Home() {
             <p>The platform exposes source, status and limitations so an AI agent does not turn an orienting lookup into an authoritative conclusion.</p>
           </div>
           <div className="grid">
-            {layers.map(([title, status, text]) => (
-              <article className="card" key={title}>
-                <span className={`badge ${status.toLowerCase().replace("-", "")}`}>{status}</span>
-                <h3>{title}</h3>
-                <p>{text}</p>
+            {sources.map((source) => (
+              <article className="card" key={source.source_key}>
+                <span className={`badge ${badgeClass(source.status)}`}>{badgeLabel(source.status)}</span>
+                <h3>{source.name}</h3>
+                <p>{source.coverage_note}</p>
+                <p><strong>{source.agency}</strong> · {source.category}</p>
               </article>
             ))}
           </div>
