@@ -42,6 +42,27 @@ type Profile = {
   limitation: string;
 };
 
+type AIAnalysis = {
+  headline: string;
+  summary: string;
+  findings: Array<{
+    category: string;
+    status: "attention" | "context" | "no_data" | "source_error" | "follow_up";
+    finding: string;
+    source: string;
+    caution: string;
+  }>;
+  follow_up: string[];
+  excavation_notice: string;
+};
+
+type AIResponse = {
+  ok: boolean;
+  error?: string;
+  model?: string;
+  analysis?: AIAnalysis;
+};
+
 function statusLabel(status: string) {
   if (status === "ok") return "LIVE";
   if (status === "no_data") return "NO DATA";
@@ -50,14 +71,25 @@ function statusLabel(status: string) {
   return "SOURCE ERROR";
 }
 
+function aiFindingLabel(status: AIAnalysis["findings"][number]["status"]) {
+  if (status === "attention") return "ATTENTION";
+  if (status === "follow_up") return "FOLLOW-UP";
+  if (status === "no_data") return "NO DATA";
+  if (status === "source_error") return "SOURCE ERROR";
+  return "CONTEXT";
+}
+
 export default function AddressSearch() {
   const [query, setQuery] = useState("4600 Silver Hill Rd, Washington, DC 20233");
   const [result, setResult] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<AIResponse | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
+    setAiResult(null);
     try {
       const response = await fetch(`/api/webmcp/address-profile?q=${encodeURIComponent(query)}`);
       setResult(await response.json());
@@ -75,6 +107,23 @@ export default function AddressSearch() {
       });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function runAiAnalysis() {
+    setAiLoading(true);
+    setAiResult(null);
+    try {
+      const response = await fetch("/api/ai/address-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ query })
+      });
+      setAiResult(await response.json());
+    } catch {
+      setAiResult({ ok: false, error: "ai_request_failed" });
+    } finally {
+      setAiLoading(false);
     }
   }
 
@@ -147,6 +196,48 @@ export default function AddressSearch() {
                   <p className="microcopy">{result.energy.limitation}</p>
                 </article>
               </div>
+
+              <section className="ai-panel" aria-labelledby="ai-analysis-heading">
+                <div className="ai-panel-head">
+                  <div>
+                    <span className="mini-label">OPENAI INTERPRETATION</span>
+                    <h3 id="ai-analysis-heading">Explain this evidence</h3>
+                    <p>Turns the source results into a concise decision-support summary. It does not create new facts.</p>
+                  </div>
+                  <button className="ai-button" type="button" onClick={runAiAnalysis} disabled={aiLoading}>
+                    {aiLoading ? "Interpreting…" : aiResult?.ok ? "Refresh AI interpretation" : "Interpret with AI"}
+                  </button>
+                </div>
+
+                {aiResult && !aiResult.ok && (
+                  <p className="ai-error">AI interpretation is unavailable right now ({aiResult.error ?? "unknown error"}). The source profile above remains usable.</p>
+                )}
+
+                {aiResult?.ok && aiResult.analysis && (
+                  <div className="ai-output">
+                    <h3>{aiResult.analysis.headline}</h3>
+                    <p className="ai-summary">{aiResult.analysis.summary}</p>
+                    <div className="ai-findings">
+                      {aiResult.analysis.findings.map((finding, index) => (
+                        <article className="ai-finding" key={`${finding.category}-${index}`}>
+                          <span className="badge next">{aiFindingLabel(finding.status)}</span>
+                          <strong>{finding.category}</strong>
+                          <p>{finding.finding}</p>
+                          <p className="microcopy"><b>Source:</b> {finding.source} · {finding.caution}</p>
+                        </article>
+                      ))}
+                    </div>
+                    {aiResult.analysis.follow_up.length > 0 && (
+                      <div className="ai-followup">
+                        <strong>Recommended follow-up</strong>
+                        <ul>{aiResult.analysis.follow_up.map((item) => <li key={item}>{item}</li>)}</ul>
+                      </div>
+                    )}
+                    <p className="ai-excavation-notice">{aiResult.analysis.excavation_notice}</p>
+                    <p className="microcopy">Model: {aiResult.model ?? "OpenAI"}. AI interprets the evidence shown above; authoritative source limitations still control.</p>
+                  </div>
+                )}
+              </section>
             </>
           )}
           <p className="limitation profile-limitation">{result.limitation}</p>
