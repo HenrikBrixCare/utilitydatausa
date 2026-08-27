@@ -2,42 +2,15 @@
 
 import { FormEvent, useState } from "react";
 
-type Address = {
-  matchedAddress: string;
-  latitude: number;
-  longitude: number;
-};
-
+type Address = { matchedAddress: string; latitude: number; longitude: number; };
 type Profile = {
   ok: boolean;
   error?: string;
   address: Address | null;
-  flood: null | {
-    status: string;
-    floodZone: string | null;
-    zoneSubtype: string | null;
-    sfha: boolean | null;
-    staticBfe: number | null;
-    depth: number | null;
-    limitation: string;
-  };
-  environment: null | {
-    status: string;
-    radiusMiles: number;
-    facilities: Array<{ registryId: string | null; name: string; city: string | null; state: string | null }>;
-    limitation: string;
-  };
-  water: null | {
-    status: string;
-    nearbySites: Array<{ siteNumber: string; name: string; siteType: string; distanceMiles: number }>;
-    limitation: string;
-  };
-  excavation811: null | {
-    status: string;
-    state: string | null;
-    instruction: string;
-    limitation: string;
-  };
+  flood: null | { status: string; floodZone: string | null; zoneSubtype: string | null; sfha: boolean | null; staticBfe: number | null; depth: number | null; limitation: string; };
+  environment: null | { status: string; radiusMiles: number; facilities: Array<{ registryId: string | null; name: string; city: string | null; state: string | null }>; limitation: string; };
+  water: null | { status: string; nearbySites: Array<{ siteNumber: string; name: string; siteType: string; distanceMiles: number }>; limitation: string; };
+  excavation811: null | { status: string; state: string | null; instruction: string; limitation: string; };
   energy: { status: string; limitation: string };
   limitation: string;
 };
@@ -45,23 +18,12 @@ type Profile = {
 type AIAnalysis = {
   headline: string;
   summary: string;
-  findings: Array<{
-    category: string;
-    status: "attention" | "context" | "no_data" | "source_error" | "follow_up";
-    finding: string;
-    source: string;
-    caution: string;
-  }>;
+  findings: Array<{ category: string; status: "attention" | "context" | "no_data" | "source_error" | "follow_up"; finding: string; source: string; caution: string }>;
   follow_up: string[];
   excavation_notice: string;
 };
 
-type AIResponse = {
-  ok: boolean;
-  error?: string;
-  model?: string;
-  analysis?: AIAnalysis;
-};
+type AIResponse = { ok: boolean; error?: string; model?: string; analysis?: AIAnalysis; };
 
 function statusLabel(status: string) {
   if (status === "ok") return "LIVE";
@@ -71,12 +33,12 @@ function statusLabel(status: string) {
   return "SOURCE ERROR";
 }
 
-function aiFindingLabel(status: AIAnalysis["findings"][number]["status"]) {
-  if (status === "attention") return "ATTENTION";
-  if (status === "follow_up") return "FOLLOW-UP";
-  if (status === "no_data") return "NO DATA";
-  if (status === "source_error") return "SOURCE ERROR";
-  return "CONTEXT";
+function findingLabel(status: AIAnalysis["findings"][number]["status"]) {
+  if (status === "attention") return "Attention";
+  if (status === "follow_up") return "Follow-up";
+  if (status === "no_data") return "No data";
+  if (status === "source_error") return "Source error";
+  return "Context";
 }
 
 export default function AddressSearch() {
@@ -94,17 +56,7 @@ export default function AddressSearch() {
       const response = await fetch(`/api/webmcp/address-profile?q=${encodeURIComponent(query)}`);
       setResult(await response.json());
     } catch {
-      setResult({
-        ok: false,
-        error: "request_failed",
-        address: null,
-        flood: null,
-        environment: null,
-        water: null,
-        excavation811: null,
-        energy: { status: "planned", limitation: "Not checked." },
-        limitation: "The address profile request failed."
-      });
+      setResult({ ok: false, error: "request_failed", address: null, flood: null, environment: null, water: null, excavation811: null, energy: { status: "planned", limitation: "Not checked." }, limitation: "The address profile request failed." });
     } finally {
       setLoading(false);
     }
@@ -128,121 +80,68 @@ export default function AddressSearch() {
   }
 
   return (
-    <div className="search-card profile-search-card">
-      <form onSubmit={submit} className="search-form">
-        <label htmlFor="address">U.S. address</label>
-        <div className="search-row">
-          <input id="address" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Street, city, state, ZIP" />
-          <button type="submit" disabled={loading}>{loading ? "Building profile…" : "Build address profile"}</button>
+    <>
+      <section className="portal-hero">
+        <div className="portal-container hero-grid">
+          <div className="hero-copy">
+            <h1>Find authoritative data for any U.S. address.</h1>
+            <p><strong>UtilityDataUSA</strong> is an agent-ready access layer that unifies utility, environmental, and risk data across fragmented sources.</p>
+          </div>
+          <div className="hero-search-card">
+            <form onSubmit={submit}>
+              <label htmlFor="address">Search by U.S. address</label>
+              <div className="hero-search-row">
+                <input id="address" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Street, city, state, ZIP" />
+                <button type="submit" disabled={loading}><span aria-hidden="true">⌕</span>{loading ? "Searching…" : "Search"}</button>
+              </div>
+              <small>Examples: 1600 Pennsylvania Ave NW, Washington, DC 20500 &nbsp;•&nbsp; 1 Infinite Loop, Cupertino, CA 95014</small>
+            </form>
+          </div>
         </div>
-      </form>
+      </section>
 
       {result && (
-        <div className="results profile-results">
-          {!result.ok && <p>Profile failed: {result.error ?? "unknown error"}</p>}
-          {result.ok && !result.address && <p>No Census address match found, so downstream sources were not queried.</p>}
+        <section className="portal-container live-profile-section" aria-live="polite">
+          {!result.ok && <div className="profile-message error"><strong>Profile unavailable.</strong> {result.error ?? "Unknown error"}</div>}
+          {result.ok && !result.address && <div className="profile-message"><strong>No Census address match found.</strong> Downstream location-based sources were not queried.</div>}
           {result.address && (
             <>
-              <div className="result address-result">
-                <div>
-                  <span className="mini-label">MATCHED ADDRESS</span>
-                  <strong>{result.address.matchedAddress}</strong>
-                </div>
-                <span>{result.address.latitude.toFixed(6)}, {result.address.longitude.toFixed(6)}</span>
+              <div className="live-profile-heading">
+                <div><span className="section-kicker">LIVE ADDRESS PROFILE</span><h2>{result.address.matchedAddress}</h2><p>{result.address.latitude.toFixed(6)}, {result.address.longitude.toFixed(6)}</p></div>
+                <button className="ai-action-button" type="button" onClick={runAiAnalysis} disabled={aiLoading}>{aiLoading ? "Interpreting…" : aiResult?.ok ? "Refresh AI interpretation" : "✦ Interpret with AI"}</button>
               </div>
 
-              <div className="profile-grid">
-                <article className="profile-card">
-                  <span className={`badge ${result.flood?.status === "ok" ? "live" : "next"}`}>{statusLabel(result.flood?.status ?? "error")}</span>
-                  <h3>FEMA flood</h3>
-                  {result.flood?.status === "ok" ? (
-                    <p><strong>Zone {result.flood.floodZone ?? "—"}</strong>{result.flood.sfha === null ? "" : result.flood.sfha ? " · Special Flood Hazard Area" : " · Outside SFHA polygon"}</p>
-                  ) : <p>No FEMA flood-zone conclusion returned.</p>}
-                  {result.flood?.zoneSubtype && <p>{result.flood.zoneSubtype}</p>}
-                  <p className="microcopy">{result.flood?.limitation}</p>
-                </article>
+              <div className="live-result-grid">
+                <article className="live-result-card"><div className="result-card-top"><span className="result-icon flood">≈</span><strong>FEMA Flood Context</strong><em className={result.flood?.status === "ok" ? "status-live" : "status-muted"}>{statusLabel(result.flood?.status ?? "error")}</em></div><h3>{result.flood?.status === "ok" ? `Zone ${result.flood.floodZone ?? "—"}` : "No flood-zone conclusion"}</h3>{result.flood?.zoneSubtype && <p>{result.flood.zoneSubtype}</p>}<small>{result.flood?.limitation}</small></article>
 
-                <article className="profile-card">
-                  <span className={`badge ${result.environment?.status === "ok" ? "live" : "next"}`}>{statusLabel(result.environment?.status ?? "error")}</span>
-                  <h3>EPA environment</h3>
-                  <p><strong>{result.environment?.facilities.length ?? 0}</strong> FRS facilities returned within {result.environment?.radiusMiles ?? 3} miles.</p>
-                  {result.environment?.facilities.slice(0, 3).map((facility) => (
-                    <p className="compact-item" key={facility.registryId ?? facility.name}>{facility.name}{facility.city ? ` · ${facility.city}${facility.state ? `, ${facility.state}` : ""}` : ""}</p>
-                  ))}
-                  <p className="microcopy">{result.environment?.limitation}</p>
-                </article>
+                <article className="live-result-card"><div className="result-card-top"><span className="result-icon environment">●</span><strong>EPA Facility Screening</strong><em className={result.environment?.status === "ok" ? "status-live" : "status-muted"}>{statusLabel(result.environment?.status ?? "error")}</em></div><h3>{result.environment?.facilities.length ?? 0} nearby facilities</h3><p>Within {result.environment?.radiusMiles ?? 3} miles</p>{result.environment?.facilities.slice(0, 2).map((facility) => <p className="compact-result" key={facility.registryId ?? facility.name}>{facility.name}</p>)}<small>{result.environment?.limitation}</small></article>
 
-                <article className="profile-card">
-                  <span className={`badge ${result.water?.status === "ok" ? "live" : "next"}`}>{statusLabel(result.water?.status ?? "error")}</span>
-                  <h3>USGS water</h3>
-                  <p><strong>{result.water?.nearbySites.length ?? 0}</strong> nearby active hydrologic monitoring sites.</p>
-                  {result.water?.nearbySites.slice(0, 3).map((site) => (
-                    <p className="compact-item" key={site.siteNumber}>{site.name} · {site.distanceMiles.toFixed(1)} mi</p>
-                  ))}
-                  <p className="microcopy">{result.water?.limitation}</p>
-                </article>
+                <article className="live-result-card"><div className="result-card-top"><span className="result-icon water">≋</span><strong>USGS Monitoring</strong><em className={result.water?.status === "ok" ? "status-live" : "status-muted"}>{statusLabel(result.water?.status ?? "error")}</em></div><h3>{result.water?.nearbySites.length ?? 0} active sites</h3>{result.water?.nearbySites.slice(0, 2).map((site) => <p className="compact-result" key={site.siteNumber}>{site.name} · {site.distanceMiles.toFixed(1)} mi</p>)}<small>{result.water?.limitation}</small></article>
 
-                <article className="profile-card">
-                  <span className="badge followup">FOLLOW-UP</span>
-                  <h3>811 excavation</h3>
-                  <p>{result.excavation811?.instruction}</p>
-                  <p className="microcopy">{result.excavation811?.limitation}</p>
-                </article>
+                <article className="live-result-card"><div className="result-card-top"><span className="result-icon utility">⚡</span><strong>Electric Utility Context</strong><em className="status-info">{statusLabel(result.energy.status)}</em></div><h3>Service territory context</h3><p>EIA + state/local utility adapters.</p><small>{result.energy.limitation}</small></article>
 
-                <article className="profile-card muted-card">
-                  <span className="badge next">PLANNED</span>
-                  <h3>Electric utility</h3>
-                  <p>EIA + state/local service-territory adapter.</p>
-                  <p className="microcopy">{result.energy.limitation}</p>
-                </article>
+                <article className="live-result-card dig-result"><div className="result-card-top"><span className="result-icon dig">811</span><strong>Excavation Notice</strong><em className="status-warning">FOLLOW-UP</em></div><h3>Contact 811 before excavation</h3><p>{result.excavation811?.instruction}</p><small>{result.excavation811?.limitation}</small></article>
               </div>
 
-              <section className="ai-panel" aria-labelledby="ai-analysis-heading">
-                <div className="ai-panel-head">
-                  <div>
-                    <span className="mini-label">OPENAI INTERPRETATION</span>
-                    <h3 id="ai-analysis-heading">Explain this evidence</h3>
-                    <p>Turns the source results into a concise decision-support summary. It does not create new facts.</p>
-                  </div>
-                  <button className="ai-button" type="button" onClick={runAiAnalysis} disabled={aiLoading}>
-                    {aiLoading ? "Interpreting…" : aiResult?.ok ? "Refresh AI interpretation" : "Interpret with AI"}
-                  </button>
-                </div>
+              {aiResult && !aiResult.ok && <div className="profile-message error">AI interpretation is unavailable right now ({aiResult.error ?? "unknown error"}). The source profile remains usable.</div>}
 
-                {aiResult && !aiResult.ok && (
-                  <p className="ai-error">AI interpretation is unavailable right now ({aiResult.error ?? "unknown error"}). The source profile above remains usable.</p>
-                )}
-
-                {aiResult?.ok && aiResult.analysis && (
-                  <div className="ai-output">
-                    <h3>{aiResult.analysis.headline}</h3>
-                    <p className="ai-summary">{aiResult.analysis.summary}</p>
-                    <div className="ai-findings">
-                      {aiResult.analysis.findings.map((finding, index) => (
-                        <article className="ai-finding" key={`${finding.category}-${index}`}>
-                          <span className="badge next">{aiFindingLabel(finding.status)}</span>
-                          <strong>{finding.category}</strong>
-                          <p>{finding.finding}</p>
-                          <p className="microcopy"><b>Source:</b> {finding.source} · {finding.caution}</p>
-                        </article>
-                      ))}
-                    </div>
-                    {aiResult.analysis.follow_up.length > 0 && (
-                      <div className="ai-followup">
-                        <strong>Recommended follow-up</strong>
-                        <ul>{aiResult.analysis.follow_up.map((item) => <li key={item}>{item}</li>)}</ul>
-                      </div>
-                    )}
-                    <p className="ai-excavation-notice">{aiResult.analysis.excavation_notice}</p>
-                    <p className="microcopy">Model: {aiResult.model ?? "OpenAI"}. AI interprets the evidence shown above; authoritative source limitations still control.</p>
+              {aiResult?.ok && aiResult.analysis && (
+                <section className="live-ai-panel">
+                  <div className="live-ai-heading"><div><span className="section-kicker">✦ OPENAI INTERPRETATION</span><h2>{aiResult.analysis.headline}</h2><p>{aiResult.analysis.summary}</p></div><span className="ai-model-pill">{aiResult.model ?? "OpenAI"}</span></div>
+                  <div className="ai-finding-list">
+                    {aiResult.analysis.findings.map((finding, index) => (
+                      <article key={`${finding.category}-${index}`}><span className={`finding-dot ${finding.status}`}>•</span><div><strong>{finding.category}</strong><p>{finding.finding}</p><small><b>{findingLabel(finding.status)}</b> · Source: {finding.source} · {finding.caution}</small></div></article>
+                    ))}
                   </div>
-                )}
-              </section>
+                  {aiResult.analysis.follow_up.length > 0 && <div className="ai-follow-up"><strong>Recommended follow-up</strong><ul>{aiResult.analysis.follow_up.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+                  <div className="excavation-ai-notice">{aiResult.analysis.excavation_notice}</div>
+                </section>
+              )}
+              <p className="profile-bottom-limitation">{result.limitation}</p>
             </>
           )}
-          <p className="limitation profile-limitation">{result.limitation}</p>
-        </div>
+        </section>
       )}
-    </div>
+    </>
   );
 }
