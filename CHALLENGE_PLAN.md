@@ -2,48 +2,67 @@
 
 ## One-sentence demo
 
-A user or AI agent enters one U.S. address and UtilityDataUSA resolves the location, discovers relevant official data sources, preserves source limitations, and exposes the same context to the agent through WebMCP tools.
+A user or AI agent enters one U.S. address and UtilityDataUSA resolves the location, checks multiple official public sources in parallel, preserves each source's limitations, and exposes the same address profile through WebMCP tools.
 
 ## Why the problem matters
 
 Utility/property information in the U.S. is fragmented across federal agencies, states, counties, cities, utilities and one-call systems. A user may need multiple websites and different terminology before they can even understand what should be checked.
 
-UtilityDataUSA is designed to become the access and normalization layer between that fragmentation and a single address-based workflow.
+UtilityDataUSA is designed as the access and normalization layer between that fragmentation and a single address-based workflow.
 
-## Demo path — phase 1
+## Milestone reached
 
-1. Open UtilityDataUSA.
-2. Search a U.S. street address.
-3. Show the official Census match and coordinates.
-4. Ask an agent to use `find_us_address`.
-5. Ask the agent what data coverage is live vs planned using `get_utilitydatausa_context`.
-6. Demonstrate that the agent preserves the excavation/811 limitation instead of inventing underground line certainty.
+The initial multi-source challenge milestone is now implemented:
 
-## Demo path — phase 2
+- Census address resolution — live.
+- FEMA NFHL flood context — live.
+- EPA FRS environmental facility screening — live.
+- USGS Water Services monitoring-site context — live.
+- State-aware 811 handoff — live as follow-up guidance, never as a replacement for 811.
+- Eight read-only WebMCP tools — implemented.
+- GitHub Actions source-health checks — implemented.
+- Vercel preview + production pipeline — implemented.
 
-Add at least two live downstream adapters so the agent can perform a multi-source address investigation. Priority:
+EIA/state-local electric service territory remains deliberately planned rather than overstated as address-level proof.
 
-1. FEMA flood context.
-2. EPA environmental context.
-3. USGS water context.
+## Recommended challenge demo
 
-Then add electric-utility territory and selected state/local adapters.
+1. Open UtilityDataUSA and enter one U.S. street address.
+2. Show the Census match and the resulting multi-source profile.
+3. Point out that each source has its own status and limitation.
+4. Ask an agent for `get_address_profile` on the same address.
+5. Ask separately for flood, environmental and water context.
+6. Ask for excavation guidance and demonstrate that the tool refuses to imply that public data replaces 811.
+7. Ask `list_authoritative_sources` to show what is live, follow-up and planned.
 
-## Challenge strengths to emphasize
+This makes the WebMCP value visible: the website is useful to a person, while the same page exposes structured, source-aware capabilities to an agent.
 
-- Real public problem, not a toy MCP demo.
-- One address as the shared key across fragmented systems.
-- WebMCP tools are attached to a human-readable product, not a hidden backend only.
-- Tool outputs preserve source, scope and limitations.
-- Safety-aware: a public-data assistant does not impersonate 811 or an engineering record.
-- Architecture is internationally extensible without pretending different countries share identical registries.
+## Challenge strengths
+
+- Real-world fragmentation problem, not a toy MCP demo.
+- One address as the common key across unrelated public systems.
+- Human UI and agent tools use the same evidence boundaries.
+- Multiple genuinely live public sources.
+- Read-only tools with explicit provenance and limitations.
+- Source errors remain errors instead of becoming false negative findings.
+- 811 safety boundary is part of the product architecture, not an afterthought.
+- Architecture can later absorb state/local adapters without pretending the U.S. has one national utility registry.
+
+## Remaining submission work
+
+- Record a concise demo video.
+- Finalize competition title/description and submission text when the exact submission form is known.
+- Add final screenshots after the UI is visually locked.
+- Add the custom `UtilityDataUSA.com` domain when purchased.
+- Add a dedicated OpenAI Platform project/key only when the AI interpretation layer is introduced.
 
 ## Definition of done for submission
 
-- Public GitHub repository.
-- Stable Vercel deployment.
-- At least 3 useful WebMCP tools.
-- At least 3 live authoritative/official data layers if technically feasible.
-- Clear source provenance in UI and tool results.
-- A concise challenge video showing human UI + agent use.
-- README with architecture, setup, demo prompts and limitations.
+- Public GitHub repository — done.
+- Stable Vercel deployment — done.
+- At least 3 useful WebMCP tools — exceeded.
+- At least 3 live authoritative/official data layers — exceeded.
+- Clear source provenance and limitations — implemented.
+- Automated build + authoritative-source smoke tests — implemented.
+- Concise human UI + agent challenge video — remaining.
+- Final submission copy/checklist — remaining until competition submission details are fixed.
