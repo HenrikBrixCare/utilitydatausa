@@ -1,0 +1,122 @@
+/* Original UtilityDataUSA civic-data emblem. Deliberately not a U.S. government seal. */
+
+.brand-mark {
+  width: 72px;
+  height: 72px;
+  flex: 0 0 72px;
+  border-radius: 50%;
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: #0b477f;
+  background: #ffffff;
+  border: 2px solid #0b477f;
+  box-shadow:
+    inset 0 0 0 4px #ffffff,
+    inset 0 0 0 6px #7ba0c4,
+    0 1px 2px rgba(5, 42, 82, .12);
+  letter-spacing: 0;
+}
+
+.brand-mark::before {
+  content: "★  ★  ★";
+  position: absolute;
+  top: 9px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #0b477f;
+  font-size: 7px;
+  line-height: 1;
+  letter-spacing: 1.5px;
+  font-weight: 700;
+}
+
+.brand-mark::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  width: 31px;
+  height: 7px;
+  transform: translateX(-50%);
+  border-top: 2px solid #0b477f;
+  border-bottom: 2px solid #0b477f;
+  opacity: .92;
+}
+
+.brand-mark > span {
+  position: relative;
+  display: block;
+  width: 31px;
+  height: 31px;
+  margin-top: 3px;
+  overflow: hidden;
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 0;
+  background: #f8fbff;
+  border: 2px solid #0b477f;
+  border-radius: 5px 5px 11px 11px;
+  box-shadow: inset 0 -3px 0 #dce9f5;
+}
+
+/* Three vertical utility/data columns inside the shield. */
+.brand-mark > span::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  top: 7px;
+  height: 13px;
+  background:
+    linear-gradient(90deg,
+      #0b477f 0 4px,
+      transparent 4px 8px,
+      #0b477f 8px 12px,
+      transparent 12px 16px,
+      #0b477f 16px 20px);
+}
+
+/* Foundation / data line. */
+.brand-mark > span::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  bottom: 5px;
+  height: 3px;
+  background: #0b477f;
+  border-radius: 3px;
+  box-shadow: 0 -5px 0 rgba(11, 71, 127, .36);
+}
+
+.footer-mark {
+  width: 62px;
+  height: 62px;
+  flex-basis: 62px;
+  color: #e8f3ff;
+  background: transparent;
+  border-color: #d9e9f8;
+  box-shadow:
+    inset 0 0 0 4px #0b4781,
+    inset 0 0 0 6px #9bbbd8;
+}
+.footer-mark::before,
+.footer-mark::after { border-color: currentColor; color: currentColor; }
+.footer-mark > span { border-color: #e8f3ff; background: transparent; box-shadow: none; }
+.footer-mark > span::before,
+.footer-mark > span::after { filter: brightness(0) invert(1); }
+
+@media (min-width: 1081px) {
+  .brand-mark { width: 78px; height: 78px; flex-basis: 78px; }
+  .brand-mark > span { width: 33px; height: 33px; }
+  .footer-mark { width: 66px; height: 66px; flex-basis: 66px; }
+}
+
+@media (max-width: 520px) {
+  .brand-mark { width: 58px; height: 58px; flex-basis: 58px; }
+  .brand-mark::before { top: 7px; font-size: 6px; }
+  .brand-mark::after { bottom: 8px; width: 25px; }
+  .brand-mark > span { width: 27px; height: 27px; }
+}
