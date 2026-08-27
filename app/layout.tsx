@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./typography.css";
 import WebMCPTools from "./components/WebMCPTools";
 
 export const metadata: Metadata = {
