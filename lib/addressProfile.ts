@@ -1,3 +1,5 @@
+import { getElectricUtilityCandidates, type ElectricUtilityContext } from "./eiaTerritory";
+
 export type SourceStatus = "ok" | "no_data" | "error" | "limited" | "planned";
 
 export type AddressMatch = {
@@ -7,6 +9,11 @@ export type AddressMatch = {
   tigerLineId: string | null;
   side: string | null;
   addressComponents: Record<string, string>;
+  stateAbbr: string | null;
+  stateName: string | null;
+  stateFips: string | null;
+  countyName: string | null;
+  countyFips: string | null;
 };
 
 export type FloodContext = {
@@ -63,12 +70,6 @@ export type ExcavationContext = {
   limitation: string;
 };
 
-export type EnergyContext = {
-  status: "planned";
-  sourceUrl: string;
-  limitation: string;
-};
-
 export type AddressProfile = {
   ok: boolean;
   query: string;
@@ -77,20 +78,30 @@ export type AddressProfile = {
   environment: EnvironmentalContext | null;
   water: WaterContext | null;
   excavation811: ExcavationContext | null;
-  energy: EnergyContext;
+  energy: ElectricUtilityContext;
   generatedAt: string;
   limitation: string;
   error?: string;
 };
 
+type CensusGeography = Record<string, unknown>;
 type CensusMatch = {
   matchedAddress?: string;
   coordinates?: { x?: number; y?: number };
   tigerLine?: { tigerLineId?: string; side?: string };
   addressComponents?: Record<string, string>;
+  geographies?: Record<string, CensusGeography[]>;
 };
 
-const USER_AGENT = "UtilityDataUSA/0.2 (+https://utilitydatausa.vercel.app)";
+const USER_AGENT = "UtilityDataUSA/0.3 (+https://utilitydatausa.vercel.app)";
+
+const STATE_FIPS_TO_ABBR: Record<string, string> = {
+  "01": "AL", "02": "AK", "04": "AZ", "05": "AR", "06": "CA", "08": "CO", "09": "CT", "10": "DE", "11": "DC", "12": "FL",
+  "13": "GA", "15": "HI", "16": "ID", "17": "IL", "18": "IN", "19": "IA", "20": "KS", "21": "KY", "22": "LA", "23": "ME", "24": "MD",
+  "25": "MA", "26": "MI", "27": "MN", "28": "MS", "29": "MO", "30": "MT", "31": "NE", "32": "NV", "33": "NH", "34": "NJ", "35": "NM",
+  "36": "NY", "37": "NC", "38": "ND", "39": "OH", "40": "OK", "41": "OR", "42": "PA", "44": "RI", "45": "SC", "46": "SD", "47": "TN",
+  "48": "TX", "49": "UT", "50": "VT", "51": "VA", "53": "WA", "54": "WV", "55": "WI", "56": "WY", "60": "AS", "66": "GU", "69": "MP", "72": "PR", "78": "VI"
+};
 
 async function fetchWithTimeout(url: string | URL, init: RequestInit = {}, timeoutMs = 9000) {
   const controller = new AbortController();
@@ -102,10 +113,25 @@ async function fetchWithTimeout(url: string | URL, init: RequestInit = {}, timeo
   }
 }
 
+function stringValue(attributes: Record<string, unknown> | undefined, key: string) {
+  const raw = attributes?.[key];
+  if (raw === undefined || raw === null || raw === "") return null;
+  return String(raw);
+}
+
+function censusGeography(match: CensusMatch, preferredKey: string, fallback: (key: string) => boolean) {
+  const geographies = match.geographies ?? {};
+  const exact = geographies[preferredKey]?.[0];
+  if (exact) return exact;
+  const entry = Object.entries(geographies).find(([key, rows]) => fallback(key) && Array.isArray(rows) && rows.length > 0);
+  return entry?.[1]?.[0] ?? null;
+}
+
 export async function geocodeAddress(query: string): Promise<AddressMatch[]> {
-  const endpoint = new URL("https://geocoding.geo.census.gov/geocoder/locations/onelineaddress");
+  const endpoint = new URL("https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress");
   endpoint.searchParams.set("address", query);
   endpoint.searchParams.set("benchmark", "Public_AR_Current");
+  endpoint.searchParams.set("vintage", "Current_Current");
   endpoint.searchParams.set("format", "json");
 
   const response = await fetchWithTimeout(endpoint, {
@@ -119,13 +145,26 @@ export async function geocodeAddress(query: string): Promise<AddressMatch[]> {
     const latitude = match.coordinates?.y;
     const longitude = match.coordinates?.x;
     if (!match.matchedAddress || typeof latitude !== "number" || typeof longitude !== "number") return [];
+
+    const stateGeo = censusGeography(match, "States", (key) => /^states?$/i.test(key));
+    const countyGeo = censusGeography(match, "Counties", (key) => /^counties?$/i.test(key));
+    const stateFips = stringValue(stateGeo ?? undefined, "STATE") ?? stringValue(stateGeo ?? undefined, "GEOID");
+    const countyCode = stringValue(countyGeo ?? undefined, "COUNTY");
+    const countyGeoid = stringValue(countyGeo ?? undefined, "GEOID");
+    const mailingState = match.addressComponents?.state ?? match.addressComponents?.STATE ?? null;
+
     return [{
       matchedAddress: match.matchedAddress,
       latitude,
       longitude,
       tigerLineId: match.tigerLine?.tigerLineId ?? null,
       side: match.tigerLine?.side ?? null,
-      addressComponents: match.addressComponents ?? {}
+      addressComponents: match.addressComponents ?? {},
+      stateAbbr: (stateFips ? STATE_FIPS_TO_ABBR[stateFips.padStart(2, "0")] : null) ?? mailingState,
+      stateName: stringValue(stateGeo ?? undefined, "NAME"),
+      stateFips,
+      countyName: stringValue(countyGeo ?? undefined, "NAME"),
+      countyFips: countyGeoid ?? (stateFips && countyCode ? `${stateFips}${countyCode}` : null)
     }];
   });
 }
@@ -288,14 +327,14 @@ export async function getWaterContext(latitude: number, longitude: number): Prom
   }
 }
 
-function collectFacilityObjects(value: unknown, output: Array<Record<string, unknown>>, depth = 0) {
-  if (depth > 8 || output.length >= 20 || value === null || value === undefined) return;
-  if (Array.isArray(value)) {
-    for (const item of value) collectFacilityObjects(item, output, depth + 1);
+function collectFacilityObjects(input: unknown, output: Array<Record<string, unknown>>, depth = 0) {
+  if (depth > 8 || output.length >= 20 || input === null || input === undefined) return;
+  if (Array.isArray(input)) {
+    for (const item of input) collectFacilityObjects(item, output, depth + 1);
     return;
   }
-  if (typeof value !== "object") return;
-  const object = value as Record<string, unknown>;
+  if (typeof input !== "object") return;
+  const object = input as Record<string, unknown>;
   if ("FacilityName" in object || "facilityName" in object || "RegistryId" in object || "registryId" in object) output.push(object);
   for (const child of Object.values(object)) collectFacilityObjects(child, output, depth + 1);
 }
@@ -389,11 +428,7 @@ export async function getAddressProfile(query: string): Promise<AddressProfile> 
         environment: null,
         water: null,
         excavation811: null,
-        energy: {
-          status: "planned",
-          sourceUrl: "https://www.eia.gov/opendata/",
-          limitation: "Electric utility/service-territory integration is not live yet."
-        },
+        energy: getElectricUtilityCandidates(null, null),
         generatedAt,
         limitation: "No Census address match was found, so downstream location-based sources were not queried."
       };
@@ -404,7 +439,6 @@ export async function getAddressProfile(query: string): Promise<AddressProfile> 
       getEnvironmentalContext(address.latitude, address.longitude),
       getWaterContext(address.latitude, address.longitude)
     ]);
-    const state = address.addressComponents.state ?? address.addressComponents.STATE ?? null;
 
     return {
       ok: true,
@@ -413,14 +447,10 @@ export async function getAddressProfile(query: string): Promise<AddressProfile> 
       flood,
       environment,
       water,
-      excavation811: get811Guidance(state),
-      energy: {
-        status: "planned",
-        sourceUrl: "https://www.eia.gov/opendata/",
-        limitation: "EIA and state/local utility service-territory integration is deliberately marked planned until an authoritative service-territory adapter is validated."
-      },
+      excavation811: get811Guidance(address.stateAbbr),
+      energy: getElectricUtilityCandidates(address.stateAbbr, address.countyName),
       generatedAt,
-      limitation: "UtilityDataUSA combines public-source decision support. It is not a substitute for 811, field locating, engineering, surveying, title work, permitting, environmental due diligence, or authoritative utility-owner records."
+      limitation: "UtilityDataUSA combines public-source decision support. EIA electric utility results are county-level candidates, not proof of the serving utility. The profile is not a substitute for 811, field locating, engineering, surveying, title work, permitting, environmental due diligence, or authoritative utility-owner records."
     };
   } catch {
     return {
@@ -431,11 +461,7 @@ export async function getAddressProfile(query: string): Promise<AddressProfile> 
       environment: null,
       water: null,
       excavation811: null,
-      energy: {
-        status: "planned",
-        sourceUrl: "https://www.eia.gov/opendata/",
-        limitation: "Electric utility/service-territory integration is not live yet."
-      },
+      energy: getElectricUtilityCandidates(null, null),
       generatedAt,
       limitation: "The address could not be resolved, so no downstream source conclusion should be drawn.",
       error: "address_profile_unavailable"
