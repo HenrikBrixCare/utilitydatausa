@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 330" role="img" aria-labelledby="title desc">
+  <title id="title">UtilityDataUSA source coverage map</title>
+  <desc id="desc">Stylized map of the United States with varying blue coverage shades.</desc>
+  <defs>
+    <clipPath id="lower48">
+      <path d="M86 67 116 52 146 55 173 48 203 57 238 54 271 58 304 62 334 63 363 66 392 69 421 76 448 84 472 96 494 104 523 102 548 111 560 128 552 144 535 149 530 161 516 167 512 184 496 191 491 208 475 219 457 226 444 241 428 244 414 256 397 252 380 240 360 235 341 229 321 224 304 220 284 216 266 211 248 207 228 198 208 194 190 184 172 180 153 170 134 162 116 151 101 139 92 124 87 108 78 95 80 81Z"/>
+    </clipPath>
+  </defs>
+  <path d="M86 67 116 52 146 55 173 48 203 57 238 54 271 58 304 62 334 63 363 66 392 69 421 76 448 84 472 96 494 104 523 102 548 111 560 128 552 144 535 149 530 161 516 167 512 184 496 191 491 208 475 219 457 226 444 241 428 244 414 256 397 252 380 240 360 235 341 229 321 224 304 220 284 216 266 211 248 207 228 198 208 194 190 184 172 180 153 170 134 162 116 151 101 139 92 124 87 108 78 95 80 81Z" fill="#dceaf7" stroke="#fff" stroke-width="5"/>
+  <g clip-path="url(#lower48)">
+    <rect x="70" y="45" width="105" height="135" fill="#164f8b"/>
+    <rect x="175" y="45" width="105" height="155" fill="#3974ad"/>
+    <rect x="280" y="45" width="105" height="190" fill="#7ba7d1"/>
+    <rect x="385" y="55" width="95" height="205" fill="#4f83b8"/>
+    <rect x="480" y="80" width="100" height="160" fill="#174d84"/>
+    <g fill="none" stroke="#f7fbff" stroke-width="4" opacity=".95">
+      <path d="M125 48 119 158M171 52 165 180M217 53 213 197M263 57 261 210M311 59 309 223M359 64 356 234M407 70 403 248M455 86 448 236M501 102 492 210"/>
+      <path d="M83 91 556 125M91 125 543 155M111 155 523 184M151 184 495 213"/>
+      <path d="M214 95 236 122 228 153M357 98 374 128 368 164M435 110 450 142 441 176"/>
+    </g>
+  </g>
+  <path d="M93 267 116 256 142 260 151 275 134 287 104 283Z" fill="#174d84" stroke="#fff" stroke-width="4"/>
+  <path d="M169 281c15-7 29-7 42 0-12 7-26 11-42 9Z" fill="#5d8fc1" stroke="#fff" stroke-width="4"/>
+  <circle cx="224" cy="292" r="5" fill="#8eb5d8"/><circle cx="241" cy="299" r="4" fill="#5d8fc1"/><circle cx="258" cy="304" r="3.5" fill="#174d84"/>
+</svg>
