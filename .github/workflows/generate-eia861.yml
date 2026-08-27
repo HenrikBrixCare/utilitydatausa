@@ -1,0 +1,42 @@
+name: Generate EIA-861 county utility index
+
+on:
+  push:
+    branches: [feature/eia-county-context]
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    if: ${{ !contains(github.event.head_commit.message, '[eia-generated]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/eia-county-context
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install workbook reader
+        run: pip install --disable-pip-version-check openpyxl
+
+      - name: Generate county utility index from official EIA bulk ZIP
+        run: python scripts/update_eia861_territory.py
+
+      - name: Commit generated data
+        run: |
+          git config user.name "utilitydatausa-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/eia861_service_territory_2024.json
+          if git diff --cached --quiet; then
+            echo "No generated data changes"
+          else
+            git commit -m "Generate EIA-861 county utility index [eia-generated]"
+            git push origin HEAD:feature/eia-county-context
+          fi
