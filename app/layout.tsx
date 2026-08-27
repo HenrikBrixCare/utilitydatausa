@@ -3,6 +3,7 @@ import "./globals.css";
 import "./typography.css";
 import "./logo.css";
 import "./master-design.css";
+import "./pixel-match.css";
 import WebMCPTools from "./components/WebMCPTools";
 
 export const metadata: Metadata = {
