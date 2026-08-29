@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAddressProfile } from "@/lib/addressProfile";
+import { getExpandedAddressProfile } from "@/lib/expandedAddressProfile";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ const analysisSchema = {
     summary: { type: "string" },
     findings: {
       type: "array",
-      maxItems: 8,
+      maxItems: 10,
       items: {
         type: "object",
         additionalProperties: false,
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "invalid_query" }, { status: 400 });
   }
 
-  const profile = await getAddressProfile(query);
+  const profile = await getExpandedAddressProfile(query);
   if (!profile.ok || !profile.address) {
     return NextResponse.json({
       ok: false,
@@ -94,11 +94,13 @@ export async function POST(request: NextRequest) {
   const evidence = {
     query: profile.query,
     address: profile.address,
+    geography: profile.geography,
     flood: profile.flood,
     environment: profile.environment,
     water: profile.water,
     excavation811: profile.excavation811,
     energy: profile.energy,
+    pipeline: profile.pipeline,
     generatedAt: profile.generatedAt,
     overallLimitation: profile.limitation
   };
@@ -119,7 +121,7 @@ export async function POST(request: NextRequest) {
         model: MODEL,
         store: false,
         reasoning: { effort: "low" },
-        max_output_tokens: 1400,
+        max_output_tokens: 1600,
         text: {
           verbosity: "low",
           format: {
@@ -135,6 +137,8 @@ export async function POST(request: NextRequest) {
           "Never invent a utility owner, underground line position, service availability, contamination finding, flood conclusion, permit status, property title fact, or excavation clearance.",
           "Preserve source errors and no-data states exactly: unavailable data is not a negative finding.",
           "FEMA is flood-hazard context; EPA FRS is facility screening; USGS sites are monitoring locations; none of these alone proves property-level conditions.",
+          "EIA-861 county/state service-territory context does not prove which electric utility serves a specific address. A state residential price is an average, not a property tariff or bill.",
+          "PHMSA NPMS public context excludes gas distribution and gathering lines, is not exact pipeline locating, and must never be interpreted as evidence that a specific address is clear of pipelines.",
           "811 guidance must always say UtilityDataUSA does not replace an 811 ticket, utility marks, field locating, engineering review, potholing, permits, or required excavation procedures.",
           "Write concise plain-English U.S. wording suitable for a property owner, contractor, advisor, or public-sector user.",
           "Return only the structured schema requested by the API."
