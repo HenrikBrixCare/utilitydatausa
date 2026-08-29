@@ -1,0 +1,157 @@
+/* UtilityDataUSA 2.5D tech layer — loaded last on purpose. */
+:root{
+  --tech-navy:#07182e;
+  --tech-blue:#0b69a7;
+  --tech-cyan:#56ddd6;
+  --tech-line:#cfe0ee;
+  --tech-shadow:rgba(5,34,64,.12);
+}
+
+/* Keep the top utility bar clean — no old-fashioned text underline. */
+.public-data-message a{
+  text-decoration:none!important;
+  border-bottom:1px solid rgba(113,227,222,.48);
+  padding-bottom:1px;
+  transition:border-color .2s ease,color .2s ease;
+}
+.public-data-message a:hover{border-bottom-color:#71e3de;color:#fff}
+
+/* Shared raised-card language across the product. */
+.shortcut-card,.explain-card,.coverage-card,.resource-card,.developer-card,
+.flow-step,.source-row,.source-card,.ai-preview-panel,.coverage-panel,.dig-panel,
+.live-result-card,.product-page-hero-card{
+  position:relative;
+  overflow:hidden;
+  border-color:rgba(129,162,193,.38)!important;
+  background:linear-gradient(155deg,#ffffff 0%,#fbfdff 50%,#f0f7fd 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.98),
+    inset 0 0 0 1px rgba(255,255,255,.38),
+    0 18px 40px var(--tech-shadow),
+    0 4px 10px rgba(5,34,64,.06)!important;
+  transform:translateY(0) translateZ(0);
+  transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;
+}
+.shortcut-card::before,.explain-card::before,.coverage-card::before,.resource-card::before,.developer-card::before,
+.flow-step::before,.source-row::before,.source-card::before,.live-result-card::before{
+  content:"";
+  position:absolute;
+  left:14px;right:14px;top:0;height:2px;
+  background:linear-gradient(90deg,transparent,#58dcd6 20%,#4aa7e7 78%,transparent);
+  opacity:.62;
+  pointer-events:none;
+}
+.shortcut-card::after,.explain-card::after,.coverage-card::after,.resource-card::after,.developer-card::after,
+.source-row::after,.source-card::after,.live-result-card::after{
+  content:"";
+  position:absolute;
+  width:92px;height:92px;right:-46px;top:-48px;border-radius:50%;
+  background:radial-gradient(circle,rgba(82,211,210,.12),rgba(72,153,223,.035) 55%,transparent 72%);
+  pointer-events:none;
+}
+@media (hover:hover){
+  .shortcut-card:hover,.resource-card:hover,.developer-card:hover,.source-row:hover,.source-card:hover,.live-result-card:hover{
+    transform:translateY(-4px);
+    border-color:rgba(72,156,213,.55)!important;
+    box-shadow:inset 0 1px 0 #fff,0 24px 50px rgba(5,34,64,.16),0 7px 16px rgba(5,34,64,.08)!important;
+  }
+}
+
+/* Hero glass should still feel dark, not turn into a white card. */
+.product-page-hero-card{
+  background:linear-gradient(145deg,rgba(255,255,255,.13),rgba(255,255,255,.055))!important;
+  border-color:rgba(120,224,219,.25)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 24px 70px rgba(0,0,0,.22)!important;
+  backdrop-filter:blur(10px);
+}
+
+/* Status badges feel like live system indicators. */
+.status-pill,.step-pill{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.72),0 5px 12px rgba(14,61,91,.08);
+  border:1px solid rgba(80,132,167,.12);
+}
+.status-pill::before{content:"";width:6px;height:6px;border-radius:50%;margin-right:6px;background:currentColor;box-shadow:0 0 8px currentColor}
+
+/* Replace the thin text arrow with a compact illuminated data connector. */
+.flow-row{gap:22px}
+.flow-step{overflow:visible;background:linear-gradient(155deg,#fff,#f8fcff 56%,#edf7fd)}
+.flow-step:not(:last-child)::after{
+  content:"";
+  position:absolute;
+  right:-31px;
+  top:50%;
+  width:40px;
+  height:20px;
+  transform:translateY(-50%);
+  border-radius:0;
+  background:linear-gradient(90deg,#66e1da 0%,#43b7df 58%,#318ad0 100%);
+  clip-path:polygon(0 35%,58% 35%,58% 8%,100% 50%,58% 92%,58% 65%,0 65%);
+  filter:drop-shadow(0 0 7px rgba(76,205,217,.58));
+  z-index:5;
+}
+
+/* Buttons and official-source links: compact tech controls instead of plain text arrows. */
+.resource-card .resource-links a,.source-row a,.shortcut-card a,.developer-card a{
+  border:1px solid #d5e5f1;
+  background:linear-gradient(180deg,#f8fcff,#eaf4fb);
+  border-radius:10px;
+  color:#075d98;
+  box-shadow:inset 0 1px 0 #fff,0 5px 12px rgba(10,65,105,.07);
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+}
+.resource-card .resource-links a{padding:8px 11px!important}
+.resource-card .resource-links a::after,.source-row a::after,.shortcut-card>a::after,.developer-card>a::after{
+  content:"";
+  display:inline-block;
+  width:9px;height:9px;
+  margin-left:7px;
+  border-top:2px solid currentColor;
+  border-right:2px solid currentColor;
+  transform:translateY(-1px) rotate(45deg);
+  opacity:.78;
+}
+@media (hover:hover){
+  .resource-card .resource-links a:hover,.source-row a:hover,.shortcut-card a:hover,.developer-card a:hover{
+    transform:translateY(-1px);
+    border-color:#9fcbe7;
+    box-shadow:inset 0 1px 0 #fff,0 8px 18px rgba(8,84,135,.12);
+  }
+}
+
+/* Dark official-tools list gets a glass/data feel. */
+.product-section.navy{position:relative;overflow:hidden}
+.product-section.navy::before{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.12;
+  background-image:linear-gradient(rgba(94,216,211,.16) 1px,transparent 1px),linear-gradient(90deg,rgba(94,216,211,.16) 1px,transparent 1px);
+  background-size:38px 38px;
+  mask-image:linear-gradient(to bottom,transparent,black 16%,black 84%,transparent);
+}
+.product-section.navy>.portal-container{position:relative;z-index:1}
+.link-list a{
+  position:relative;
+  overflow:hidden;
+  border-color:rgba(108,219,215,.18)!important;
+  background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.035))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 10px 25px rgba(0,0,0,.12);
+  transition:transform .2s ease,border-color .2s ease,background .2s ease;
+}
+.link-list a::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:2px;background:linear-gradient(#62e0d9,#3f9fe0)}
+.link-list a span{font-size:0;width:26px;height:26px;border:1px solid rgba(109,222,217,.3);border-radius:8px;display:grid;place-items:center;background:rgba(83,211,205,.08)}
+.link-list a span::before{content:"";width:8px;height:8px;border-top:2px solid #70ddd7;border-right:2px solid #70ddd7;transform:rotate(45deg);margin-left:-3px}
+@media (hover:hover){.link-list a:hover{transform:translateY(-2px);border-color:rgba(109,222,217,.42)!important;background:linear-gradient(145deg,rgba(255,255,255,.10),rgba(70,183,204,.055))!important}}
+
+/* Make the main product buttons a little more physical without becoming glossy/gaming-like. */
+.product-button{
+  border:1px solid rgba(5,62,101,.16);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 9px 20px rgba(8,76,121,.15);
+  transition:transform .18s ease,box-shadow .18s ease;
+}
+@media (hover:hover){.product-button:hover{transform:translateY(-2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 13px 25px rgba(8,76,121,.20)}}
+
+@media(max-width:1000px){
+  .flow-row{gap:14px}
+  .flow-step:not(:last-child)::after{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .shortcut-card,.resource-card,.developer-card,.source-row,.source-card,.live-result-card,.product-button,.link-list a{transition:none!important}
+}
