@@ -18,10 +18,10 @@ export default function Home() {
         <div className="portal-container">
           <div className="one-address-banner">
             <div>
-              <h2>One address instead of ten websites.</h2>
-              <p>Public information is scattered across federal agencies, states, counties, cities, utilities and specialist systems. UtilityDataUSA is the shortcut: enter the address once, let the connected sources do their jobs, and get the evidence organized in one place.</p>
+              <h2>Search once. Keep the evidence together.</h2>
+              <p>UtilityDataUSA starts from one matched address and brings each connected source into the same workflow, so the user can compare context without repeating the same search across multiple agencies and portals.</p>
             </div>
-            <strong>SEARCH ONCE</strong>
+            <strong>ONE WORKFLOW</strong>
           </div>
         </div>
       </section>
@@ -42,13 +42,13 @@ export default function Home() {
       <section className="product-section white">
         <div className="portal-container">
           <div className="product-section-head">
-            <span className="product-page-eyebrow">Current live foundation</span>
-            <h2>Useful public-data context from one starting address.</h2>
-            <p>The current product connects implemented source adapters for address/geography, FEMA flood context, EPA facility screening, USGS water monitoring and state-aware 811 follow-up guidance. More utility, pipeline, property and local-government sources are being added carefully.</p>
+            <span className="product-page-eyebrow">Current product foundation</span>
+            <h2>Live data plus public context from one starting address.</h2>
+            <p>The current profile combines Census address/geography, FEMA flood context, EPA facility screening and USGS water monitoring with EIA electric-utility context, PHMSA/NPMS pipeline context and state-aware 811 safety follow-up.</p>
           </div>
           <div className="coverage-grid">
-            <article className="coverage-card"><span className="status-pill status-live">Live</span><h3>Address & geography</h3><p>U.S. Census Bureau address matching gives the workflow a common location reference.</p></article>
-            <article className="coverage-card"><span className="status-pill status-live">Live</span><h3>Flood · Environment · Water</h3><p>FEMA, EPA and USGS source evidence is organized around the matched address with source-specific limitations.</p></article>
+            <article className="coverage-card"><span className="status-pill status-live">Live</span><h3>Address · Flood · Environment · Water</h3><p>Census, FEMA, EPA and USGS provide the live national foundation around the matched address.</p></article>
+            <article className="coverage-card"><span className="status-pill status-context">Public context</span><h3>Electric utilities · Pipelines</h3><p>EIA and PHMSA add useful geographic context with stricter limits on what can be claimed at address level.</p></article>
             <article className="coverage-card"><span className="status-pill status-followup">Safety handoff</span><h3>811 excavation guidance</h3><p>UtilityDataUSA points users toward the required state one-call process. It never replaces an 811 ticket or field locating.</p></article>
           </div>
           <div className="product-cta-row"><Link className="product-button" href="/data-coverage">See all coverage</Link><Link className="product-button secondary" href="/resources">Open official resources</Link></div>
