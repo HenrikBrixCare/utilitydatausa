@@ -1,18 +1,19 @@
 # UtilityDataUSA Data Sources
 
-This file separates **live**, **planned**, and **follow-up-only** sources. A source is not presented as live until an adapter has been implemented and tested.
+This file separates **live**, **public-context**, **follow-up**, and **expanding** sources. A source is not presented as live when its public access or geographic precision does not support an address-level conclusion.
 
 ## LIVE — U.S. Census Bureau Geocoding Services
 
-**Purpose:** resolve a submitted U.S. street address to a matched address and coordinates using MAF/TIGER-based geocoding.
+**Purpose:** resolve a submitted U.S. street address to a matched address and coordinates using MAF/TIGER-based geocoding, then add county/state geography for downstream context.
 
 Official documentation:
 - https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html
 - https://www.census.gov/programs-surveys/geography/technical-documentation/complete-technical-documentation/census-geocoder.html
 
-Adapter:
+Adapters:
 - `app/api/webmcp/address-search/route.ts`
 - shared aggregation in `lib/addressProfile.ts`
+- county/state expansion in `lib/expandedAddressProfile.ts`
 
 **Limitation:** a Census geocode is a location match, not proof of utility ownership, underground line position, property title, permit status or excavation clearance.
 
@@ -48,12 +49,47 @@ Adapter:
 
 Official documentation:
 - https://waterservices.usgs.gov/docs/site-service/
-- https://waterservices.usgs.gov/docs/site-service/site-service-details/
+- https://api.waterdata.usgs.gov/docs/
 
 Adapter:
 - `lib/addressProfile.ts` → `getWaterContext`
 
 **Limitation:** USGS monitoring sites are not water-main maps and do not identify a property's drinking-water provider, sewer provider, water quality or service availability.
+
+## PUBLIC CONTEXT — U.S. Energy Information Administration / EIA-861
+
+**Purpose:** add electric-utility context around the matched address using Census county/state geography and official EIA sources.
+
+Official starting points:
+- https://www.eia.gov/opendata/
+- https://www.eia.gov/electricity/data/eia861/
+- https://www.eia.gov/opendata/register.php
+
+Adapter:
+- `lib/expandedAddressProfile.ts` → EIA electric context
+- WebMCP tool: `get_electric_utility_context`
+
+Current behavior:
+- county/state geography is attached to the address profile;
+- EIA-861 is exposed as the authoritative service-territory source;
+- when `EIA_API_KEY` is configured, the profile can also return current state-level residential electricity price context from EIA API v2.
+
+**Limitation:** Form EIA-861 service-territory data identifies counties and states where utilities report distribution equipment. It does **not** prove which utility serves a specific street address. State residential price data is an average, not a tariff or bill for the property.
+
+## PUBLIC CONTEXT — PHMSA National Pipeline Mapping System (NPMS)
+
+**Purpose:** add county/ZIP-aware public pipeline context and route users to official PHMSA tools.
+
+Official public tools:
+- https://www.npms.phmsa.dot.gov/GeneralPublic
+- https://pvnpms.phmsa.dot.gov/
+- https://www.npms.phmsa.dot.gov/FindWhosOperating.aspx
+
+Adapter:
+- `lib/expandedAddressProfile.ts` → PHMSA public context
+- WebMCP tool: `get_pipeline_context`
+
+**Limitation:** NPMS public data covers hazardous-liquid and gas-transmission pipelines, LNG plants and breakout tanks. It does not include gas distribution or gathering lines, public map detail is restricted, and NPMS is not exact line locating. It must never be used instead of 811 or field locating.
 
 ## FOLLOW-UP — 811 / state one-call systems
 
@@ -68,17 +104,7 @@ Adapter:
 
 **Limitation:** UtilityDataUSA does not locate underground lines and must never be presented as a substitute for an 811 ticket, utility-owner response, field marks, potholing, engineering review, permits, private-utility locating or any required clearance.
 
-## PLANNED — U.S. Energy Information Administration + state/local utility sources
-
-**Purpose:** electric-utility/service-territory context.
-
-Official starting points:
-- https://www.eia.gov/opendata/
-- https://www.eia.gov/electricity/data/eia861/
-
-Form EIA-861 can provide utility territory context at state/county level, but that is not definitive proof that a particular utility serves a particular address. UtilityDataUSA therefore keeps this connector labeled **planned** until an address-safe authoritative adapter has been validated.
-
-## Planned state and local adapters
+## Expanding state and local adapters
 
 A core product advantage can come from a common adapter model across:
 
@@ -94,4 +120,4 @@ Each adapter should declare geographic scope, source authority, access method, u
 
 ## Source-health policy
 
-GitHub Actions runs `scripts/source-smoke.mjs` to check the current public endpoints for Census, FEMA, EPA and USGS. A connector can remain implemented while temporarily unavailable, but the product response must return a source error rather than silently turn an unavailable lookup into a conclusion.
+GitHub Actions checks core public endpoints. A connector can remain implemented while temporarily unavailable, but the product response must return a source error or limited-context state rather than silently turning an unavailable lookup into a conclusion.
