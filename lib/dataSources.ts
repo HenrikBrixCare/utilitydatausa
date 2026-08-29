@@ -18,43 +18,59 @@ const fallbackSources: DataSource[] = [
   },
   {
     source_key: "fema_flood",
-    name: "FEMA Flood Data",
+    name: "FEMA NFHL Flood Data",
     agency: "Federal Emergency Management Agency",
     category: "risk",
-    status: "planned",
-    coverage_note: "Flood hazard context; exact implementation and coverage will be documented per endpoint."
+    status: "active",
+    coverage_note: "Point-based public flood-hazard context. It is not a survey, elevation certificate, insurance determination or guarantee against flooding."
   },
   {
     source_key: "epa_environment",
-    name: "EPA Environmental Data",
+    name: "EPA Facility Registry Service",
     agency: "U.S. Environmental Protection Agency",
     category: "environment",
-    status: "planned",
-    coverage_note: "Environmental screening from public EPA sources."
+    status: "active",
+    coverage_note: "Nearby regulated/program-linked facility screening. Presence or absence is not complete environmental due diligence."
   },
   {
     source_key: "usgs_water",
-    name: "USGS Water Data",
+    name: "USGS Water Services",
     agency: "U.S. Geological Survey",
     category: "water",
-    status: "planned",
-    coverage_note: "Public water and hydrologic context where applicable."
+    status: "active",
+    coverage_note: "Nearby active hydrologic monitoring sites. These are not water-main or drinking-water service maps."
+  },
+  {
+    source_key: "nws_weather",
+    name: "National Weather Service API",
+    agency: "National Weather Service / NOAA",
+    category: "weather",
+    status: "active",
+    coverage_note: "Current public forecast and active weather-alert context for the matched coordinate."
   },
   {
     source_key: "eia_energy",
     name: "EIA Energy Data",
     agency: "U.S. Energy Information Administration",
     category: "energy",
-    status: "planned",
-    coverage_note: "Public energy and utility context; service territory detail varies by source."
+    status: "limited",
+    coverage_note: "EIA context is supported; current API enrichment requires a free server-side EIA API key. Service-territory data does not prove service at a specific address."
+  },
+  {
+    source_key: "phmsa_npms",
+    name: "PHMSA National Pipeline Mapping System",
+    agency: "Pipeline and Hazardous Materials Safety Administration",
+    category: "pipeline",
+    status: "limited",
+    coverage_note: "Public transmission-pipeline/operator context only. Not exact line locating and never a substitute for 811."
   },
   {
     source_key: "state_811",
     name: "State 811 Guidance",
     agency: "State one-call systems",
     category: "excavation",
-    status: "planned",
-    coverage_note: "Official state-specific call-before-you-dig guidance. UtilityDataUSA is not a substitute for 811 marking or clearance."
+    status: "active",
+    coverage_note: "Official call-before-you-dig follow-up. UtilityDataUSA is not a substitute for an 811 ticket, marking or field locating."
   }
 ];
 
