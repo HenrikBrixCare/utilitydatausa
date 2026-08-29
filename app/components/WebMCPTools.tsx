@@ -70,7 +70,7 @@ export default function WebMCPTools() {
       {
         name: "get_utilitydatausa_context",
         title: "Get UtilityDataUSA context",
-        description: "Explain current live coverage, AI interpretation, planned U.S. data layers, and safety limitations. Never claim a planned connector is live.",
+        description: "Explain current connected coverage, AI interpretation, public-context layers, expanding U.S. data layers, and safety limitations.",
         inputSchema: { type: "object", properties: {} },
         annotations: { readOnlyHint: true, untrustedContentHint: false },
         execute: () => stringify({
@@ -78,14 +78,18 @@ export default function WebMCPTools() {
           product: "UtilityDataUSA",
           country: "US",
           live: [
-            "U.S. Census Bureau address geocoding",
+            "U.S. Census Bureau address geocoding and county/state geography",
             "FEMA National Flood Hazard Layer point lookup",
             "EPA Facility Registry Service nearby-facility screening",
             "USGS Water Services nearby hydrologic monitoring sites",
             "OpenAI evidence interpretation using the normalized address profile"
           ],
-          limited: ["state-specific 811 follow-up guidance"],
-          planned: ["EIA + state/local electric utility service-territory integration", "county parcel/property adapters"],
+          limited: [
+            "state-specific 811 follow-up guidance",
+            "EIA electric utility and state price context; county/state context does not prove the provider at a street address",
+            "PHMSA NPMS public pipeline and operator context; not exact line locating"
+          ],
+          expanding: ["county parcel/property adapters", "state/local utility and permit sources"],
           limitation: "UtilityDataUSA is decision support. AI interpretation cannot upgrade approximate or incomplete source data into authoritative facts and must not be presented as a substitute for state 811 excavation clearance, field locating, engineering design, title work, permits, environmental due diligence, surveys, or authoritative utility records."
         })
       },
@@ -104,7 +108,7 @@ export default function WebMCPTools() {
       {
         name: "get_address_profile",
         title: "Get U.S. address profile",
-        description: "Build a multi-source U.S. address profile from live Census, FEMA, EPA and USGS public sources, plus 811 follow-up guidance. EIA utility territory remains explicitly planned.",
+        description: "Build the normalized multi-source U.S. address profile including Census geography, FEMA, EPA, USGS, EIA electric context, PHMSA public pipeline context, and 811 guidance.",
         inputSchema: querySchema,
         annotations: { readOnlyHint: true, untrustedContentHint: true },
         execute: async (input, context) => stringify(await profileFor(input, context))
@@ -112,7 +116,7 @@ export default function WebMCPTools() {
       {
         name: "interpret_address_profile",
         title: "Interpret U.S. address evidence with OpenAI",
-        description: "Ask UtilityDataUSA's server-side OpenAI evidence layer to explain the normalized address profile. The interpretation is constrained to supplied evidence and must preserve source errors, no-data states, and 811 limitations rather than inventing missing facts.",
+        description: "Ask UtilityDataUSA's server-side OpenAI evidence layer to explain the normalized address profile while preserving source errors and limitations.",
         inputSchema: querySchema,
         annotations: { readOnlyHint: true, untrustedContentHint: true },
         execute: async (input, context) => {
@@ -158,6 +162,30 @@ export default function WebMCPTools() {
         }
       },
       {
+        name: "get_electric_utility_context",
+        title: "Get electric utility context",
+        description: "Return Census county/state context plus EIA electric context. EIA-861 county service territory does not prove which utility serves a specific street address.",
+        inputSchema: querySchema,
+        annotations: { readOnlyHint: true, untrustedContentHint: true },
+        execute: async (input, context) => {
+          const profile = await profileFor(input, context);
+          const result = profile.result as { address?: unknown; geography?: unknown; energy?: unknown; limitation?: unknown };
+          return stringify({ ok: profile.ok, address: result?.address ?? null, geography: result?.geography ?? null, energy: result?.energy ?? null, overallLimitation: result?.limitation ?? null });
+        }
+      },
+      {
+        name: "get_pipeline_context",
+        title: "Get PHMSA pipeline context",
+        description: "Return county/ZIP-aware PHMSA NPMS public context and official viewer/operator-directory links. This is not exact pipeline locating and excludes distribution and gathering lines.",
+        inputSchema: querySchema,
+        annotations: { readOnlyHint: true, untrustedContentHint: true },
+        execute: async (input, context) => {
+          const profile = await profileFor(input, context);
+          const result = profile.result as { address?: unknown; geography?: unknown; pipeline?: unknown; limitation?: unknown };
+          return stringify({ ok: profile.ok, address: result?.address ?? null, geography: result?.geography ?? null, pipeline: result?.pipeline ?? null, overallLimitation: result?.limitation ?? null });
+        }
+      },
+      {
         name: "get_811_guidance",
         title: "Get 811 excavation guidance",
         description: "Return state-aware official 811 follow-up guidance for an address. UtilityDataUSA never replaces an 811 ticket or field locate.",
@@ -172,18 +200,19 @@ export default function WebMCPTools() {
       {
         name: "list_authoritative_sources",
         title: "List authoritative U.S. sources",
-        description: "List the authoritative public sources and current connector state used or planned by UtilityDataUSA. OpenAI is listed separately as an interpretation layer, not an authoritative source.",
+        description: "List the authoritative public sources and current connector state used by UtilityDataUSA. OpenAI is listed separately as an interpretation layer, not an authoritative source.",
         inputSchema: { type: "object", properties: {} },
         annotations: { readOnlyHint: true, untrustedContentHint: false },
         execute: () => stringify({
           ok: true,
           sources: [
-            { name: "U.S. Census Bureau Geocoding Services", status: "live", role: "address matching and coordinates" },
+            { name: "U.S. Census Bureau Geocoding Services", status: "live", role: "address matching, coordinates and county/state geography" },
             { name: "FEMA National Flood Hazard Layer", status: "live", role: "regulatory flood-hazard zone context" },
             { name: "EPA Facility Registry Service", status: "live", role: "nearby regulated/program-linked facility screening" },
             { name: "USGS Water Services", status: "live", role: "nearby hydrologic monitoring sites" },
-            { name: "Call 811 / state one-call systems", status: "follow-up", role: "official pre-excavation process" },
-            { name: "U.S. Energy Information Administration + state/local utility sources", status: "planned", role: "electric utility/service-territory context" }
+            { name: "U.S. Energy Information Administration / EIA-861", status: "limited", role: "county/state utility context and optional state residential price context" },
+            { name: "PHMSA National Pipeline Mapping System", status: "limited", role: "county/ZIP-aware public pipeline and operator context; not exact line locating" },
+            { name: "Call 811 / state one-call systems", status: "follow-up", role: "official pre-excavation process" }
           ],
           interpretation: { name: "OpenAI", status: "live", role: "structured evidence interpretation; not an authoritative data source" }
         })
