@@ -4,11 +4,12 @@ import "./typography.css";
 import "./logo.css";
 import "./master-design.css";
 import "./pixel-match.css";
+import "./product-pages.css";
 import WebMCPTools from "./components/WebMCPTools";
 
 export const metadata: Metadata = {
-  title: "UtilityDataUSA — One address. One utility data view.",
-  description: "AI- and WebMCP-powered U.S. utility, property and risk data platform."
+  title: "UtilityDataUSA — One address instead of ten websites.",
+  description: "Search one U.S. address and bring connected public-data sources into one faster, traceable workflow."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
