@@ -1,0 +1,2 @@
+/* External links keep one discreet external-link mark; flow arrows use the custom tech connector. */
+.resource-card .resource-links a::after{display:none!important}
