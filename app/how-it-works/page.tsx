@@ -23,7 +23,7 @@ export default function HowItWorksPage() {
             <strong>The shortcut is the product.</strong>
             <p>You should not need to know which federal agency, state portal, county site or utility database to search first.</p>
             <div className="value-metric"><b>1×</b><span>Enter the address</span></div>
-            <div className="value-metric"><b>→</b><span>Connected sources are checked</span></div>
+            <div className="value-metric"><b>AUTO</b><span>Connected sources are checked</span></div>
             <div className="value-metric"><b>1</b><span>Organized address-based view</span></div>
           </aside>
         </div>
@@ -41,7 +41,7 @@ export default function HowItWorksPage() {
       </div></section>
 
       <section className="product-section soft"><div className="portal-container">
-        <div className="one-address-banner"><div><h2>Time spent searching is still time.</h2><p>Public information in the United States is spread across separate agencies, maps, portals and local systems. UtilityDataUSA is built to reduce that repetitive work: fewer tabs, fewer repeated address searches and a faster route to the evidence that matters.</p></div><strong>TIME → VALUE</strong></div>
+        <div className="one-address-banner"><div><h2>Time spent searching is still time.</h2><p>Public information in the United States is spread across separate agencies, maps, portals and local systems. UtilityDataUSA is built to reduce that repetitive work: fewer tabs, fewer repeated address searches and a faster route to the evidence that matters.</p></div><strong>TIME SAVED</strong></div>
       </div></section>
 
       <section className="product-section white"><div className="portal-container">
