@@ -5,6 +5,7 @@ import "./logo.css";
 import "./master-design.css";
 import "./pixel-match.css";
 import "./product-pages.css";
+import "./tech-depth.css";
 import WebMCPTools from "./components/WebMCPTools";
 
 export const metadata: Metadata = {
