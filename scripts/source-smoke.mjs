@@ -6,7 +6,7 @@ async function fetchRetry(name, url, accept, attempts = 3) {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       const response = await fetch(url, {
-        headers: { Accept: accept, "User-Agent": "UtilityDataUSA-source-smoke/0.2" },
+        headers: { Accept: accept, "User-Agent": "UtilityDataUSA-source-smoke/0.4 (+https://utilitydatausa.com)" },
         signal: timeout()
       });
       if (!response.ok) throw new Error(`${name}: HTTP ${response.status}`);
@@ -23,8 +23,8 @@ async function fetchRetry(name, url, accept, attempts = 3) {
   throw lastError;
 }
 
-async function expectJson(name, url, validate) {
-  const response = await fetchRetry(name, url, "application/json");
+async function expectJson(name, url, validate, accept = "application/json") {
+  const response = await fetchRetry(name, url, accept);
   const data = await response.json();
   if (!validate(data)) throw new Error(`${name}: unexpected response shape`);
   console.log(`PASS ${name}`);
@@ -60,6 +60,13 @@ await expectJson(
   "EPA FRS",
   "https://ofmpub.epa.gov/frs_public2/frs_rest_services.get_facilities?latitude83=38.8&longitude83=-77.01&search_radius=1&output=JSON",
   (data) => data !== null && typeof data === "object"
+);
+
+await expectJson(
+  "National Weather Service",
+  "https://api.weather.gov/points/38.8451,-76.9284",
+  (data) => typeof data?.properties?.forecast === "string" && typeof data?.properties?.forecastOffice === "string",
+  "application/geo+json, application/json;q=0.9"
 );
 
 console.log("All authoritative source smoke checks passed.");
