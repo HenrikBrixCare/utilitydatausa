@@ -34,7 +34,7 @@ export default function Home() {
             <p>UtilityDataUSA is built for ordinary people and professionals who want the answer path to be simpler. Search here first. Open the original source only when you need to go deeper or verify a decision.</p>
           </div>
           <div className="shortcut-grid">
-            {shortcuts.map((item) => <article className="shortcut-card" key={item.href}><h3>{item.title}</h3><p>{item.text}</p><Link href={item.href}>{item.label} →</Link></article>)}
+            {shortcuts.map((item) => <article className="shortcut-card" key={item.href}><h3>{item.title}</h3><p>{item.text}</p><Link href={item.href}>{item.label}</Link></article>)}
           </div>
         </div>
       </section>
@@ -62,7 +62,7 @@ export default function Home() {
             <h2>Less time hunting. More time understanding.</h2>
             <p>Instead of opening multiple government and utility websites and typing the same address over and over, UtilityDataUSA is designed to do the repetitive source work once and present a clear starting point.</p>
           </div>
-          <div className="link-list"><Link href="/how-it-works">How the shortcut works <span>View →</span></Link><Link href="/resources">Official source library <span>View →</span></Link><Link href="/developers">API & agent architecture <span>View →</span></Link><a href="https://call811.com/811-in-your-state/" target="_blank" rel="noreferrer">811 in your state <span>Open ↗</span></a></div>
+          <div className="link-list"><Link href="/how-it-works">How the shortcut works <span>View</span></Link><Link href="/resources">Official source library <span>View</span></Link><Link href="/developers">API & agent architecture <span>View</span></Link><a href="https://call811.com/811-in-your-state/" target="_blank" rel="noreferrer">811 in your state <span>Open</span></a></div>
         </div>
       </section>
 
