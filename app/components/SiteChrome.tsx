@@ -61,23 +61,48 @@ export function SiteHeader({ active = "" }: { active?: string }) {
 export function SiteFooter() {
   return (
     <footer className="portal-footer" id="help">
-      <div className="portal-container footer-main">
+      <div className="portal-container footer-main footer-main-compact">
         <div className="footer-brand">
           <img className="brand-emblem footer-emblem" src="/utilitydata-emblem.svg" alt="" aria-hidden="true" />
           <div>
             <strong>UtilityDataUSA</strong>
-            <p>One address instead of ten websites. Independent public-data infrastructure for faster research and better-informed decisions.</p>
-            <a href="https://brixcare.dk/en" target="_blank" rel="noreferrer">Developed by BrixCare</a>
+            <p>One address. Connected public data. Original sources kept traceable.</p>
+            <a className="footer-maker" href="https://brixcare.dk/en" target="_blank" rel="noreferrer">Built by BrixCare</a>
           </div>
         </div>
-        <div><h3>Product</h3><Link href="/">Home</Link><Link href="/how-it-works">How It Works</Link><Link href="/data-coverage">Data Coverage</Link><Link href="/resources">Resources</Link><Link href="/developers">API & Developers</Link></div>
-        <div><h3>Sources</h3><Link href="/resources#data-sources">Data Sources</Link><Link href="/resources#source-transparency">Source Transparency</Link><Link href="/resources#811">811 Safety</Link><Link href="/resources#official-tools">Official Tools</Link></div>
-        <div><h3>Information</h3><Link href="/how-it-works">About UtilityDataUSA</Link><Link href="/resources#disclaimer">Legal & Disclaimers</Link><Link href="/resources#accessibility">Accessibility</Link><Link href="/resources#privacy">Privacy</Link></div>
-        <div><h3>Contact</h3><a href="mailto:info@brixcare.dk">info@brixcare.dk</a><a href="https://brixcare.dk/en" target="_blank" rel="noreferrer">BrixCare</a></div>
+
+        <div className="footer-column">
+          <h3>Explore</h3>
+          <Link href="/">Home</Link>
+          <Link href="/how-it-works">How It Works</Link>
+          <Link href="/data-coverage">Data Coverage</Link>
+          <Link href="/resources">Resources</Link>
+          <Link href="/developers">API & Developers</Link>
+        </div>
+
+        <div className="footer-column">
+          <h3>Trust & Safety</h3>
+          <Link href="/resources#source-transparency">Source Transparency</Link>
+          <Link href="/resources#811">811 Excavation Safety</Link>
+          <Link href="/resources#disclaimer">Legal & Disclaimers</Link>
+          <Link href="/resources#privacy">Privacy</Link>
+          <Link href="/resources#accessibility">Accessibility</Link>
+        </div>
+
+        <div className="footer-column">
+          <h3>Company</h3>
+          <a href="https://brixcare.dk/en" target="_blank" rel="noreferrer">BrixCare</a>
+          <a href="mailto:info@brixcare.dk">info@brixcare.dk</a>
+        </div>
       </div>
-      <div className="portal-container footer-bottom">
-        <span>Independent public-data platform · Original sources remain traceable · Developed by BrixCare</span>
-        <nav><Link href="/resources#accessibility">Accessibility</Link><Link href="/resources#data-sources">Data Sources</Link><Link href="/resources#privacy">Privacy</Link><a href="mailto:info@brixcare.dk">Contact</a><Link href="/resources">Site Map</Link></nav>
+
+      <div className="portal-container footer-bottom footer-bottom-compact">
+        <span>Independent U.S. public-data platform · Original sources stay traceable.</span>
+        <nav aria-label="Footer utility links">
+          <Link href="/resources#privacy">Privacy</Link>
+          <Link href="/resources#accessibility">Accessibility</Link>
+          <a href="mailto:info@brixcare.dk">Contact</a>
+        </nav>
       </div>
     </footer>
   );
