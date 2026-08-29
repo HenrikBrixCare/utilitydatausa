@@ -1,0 +1,130 @@
+/* UtilityDataUSA product polish — restrained desktop refinement + stronger mobile compaction. */
+
+/* Navigation: replace text glyphs with consistent line icons. */
+.portal-nav a{transition:background .18s ease,color .18s ease,border-color .18s ease}
+.portal-nav a .nav-icon{
+  width:34px;height:34px;display:grid;place-items:center;border-radius:10px;
+  color:#174f83;border:1px solid transparent;background:transparent;
+  transition:background .18s ease,border-color .18s ease,box-shadow .18s ease,transform .18s ease;
+}
+.portal-nav a .nav-icon svg{width:22px;height:22px;display:block}
+.portal-nav a.active .nav-icon{
+  color:#087e9c;border-color:#cbe8ee;
+  background:linear-gradient(145deg,#f5fdff,#e9f7fa);
+  box-shadow:inset 0 1px 0 #fff,0 6px 14px rgba(8,95,130,.10);
+}
+@media(hover:hover){
+  .portal-nav a:hover .nav-icon{transform:translateY(-2px);border-color:#d3e6f1;background:#f4f9fd}
+}
+
+/* Home shortcut cards now read like compact product actions, not text boxes. */
+.shortcut-card>a{
+  margin-top:18px!important;padding:8px 8px 8px 12px!important;min-height:46px;
+  display:flex!important;align-items:center;justify-content:space-between;gap:12px;
+  border:1px solid #cfe1ee!important;border-radius:12px!important;
+  background:linear-gradient(180deg,#fbfdff,#edf6fc)!important;
+  box-shadow:inset 0 1px 0 #fff,0 7px 16px rgba(7,74,117,.08)!important;
+  text-decoration:none!important;
+}
+.shortcut-card>a::after{
+  content:""!important;display:block!important;flex:0 0 30px;width:30px!important;height:30px!important;
+  margin:0!important;border:1px solid rgba(40,153,183,.34)!important;border-radius:9px!important;
+  background-color:rgba(65,198,208,.08)!important;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 18 18' fill='none'%3E%3Cpath d='M6.5 3.5 12 9l-5.5 5.5' stroke='%23148EAF' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")!important;
+  background-repeat:no-repeat!important;background-position:center!important;
+  transform:none!important;opacity:1!important;box-shadow:0 0 12px rgba(64,205,211,.10)!important;
+}
+
+/* External resource controls: no Unicode/emoji arrows. */
+.resource-card .resource-links a{
+  display:inline-flex!important;align-items:center!important;gap:8px!important;
+  padding:8px 9px 8px 11px!important;
+}
+.resource-card .resource-links a::after{
+  content:""!important;display:inline-block!important;width:22px!important;height:22px!important;flex:0 0 22px!important;
+  margin:0!important;border:1px solid rgba(61,144,182,.25)!important;border-radius:7px!important;
+  background-color:rgba(44,147,185,.06)!important;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 13 13' fill='none'%3E%3Cpath d='M4 9 9 4M5 4h4v4' stroke='%230B679A' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")!important;
+  background-repeat:no-repeat!important;background-position:center!important;
+  transform:none!important;opacity:1!important;
+}
+
+/* Developer tools: product name first, implementation ID second. */
+.tool-card{min-height:205px}
+.tool-card h3{margin-bottom:7px!important}
+.tool-id{
+  display:inline-block;align-self:flex-start;max-width:100%;margin:0 0 14px;padding:6px 9px;
+  border:1px solid #d7e5ef;border-radius:8px;background:#edf5fb;color:#315a78;
+  font:600 11px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  overflow-wrap:anywhere;
+}
+.tool-card p{margin-top:0!important}
+
+/* Give the dark-link controls one clear icon language. */
+.link-list a span{
+  width:30px!important;height:30px!important;flex:0 0 30px!important;border-radius:9px!important;
+}
+.link-list a span::before{
+  width:9px!important;height:9px!important;margin-left:-3px!important;
+}
+
+/* Slightly richer desktop card hierarchy without making it flashy. */
+@media(min-width:1001px){
+  .shortcut-card,.coverage-card,.resource-card,.developer-card{border-radius:20px!important}
+  .resource-grid,.coverage-grid,.developer-grid,.shortcut-grid{gap:18px!important}
+  .tool-grid{grid-template-columns:repeat(4,1fr)!important}
+  .tool-card{min-height:220px}
+}
+
+/* Mobile: less brochure, more app. */
+@media(max-width:700px){
+  .product-section{padding:42px 0!important}
+  .product-section-head{margin-bottom:24px!important}
+  .product-section-head h2{font-size:32px!important;line-height:1.08!important;letter-spacing:-1.15px!important}
+  .product-section-head p{font-size:15px!important;line-height:1.58!important}
+
+  .product-page-hero{padding:44px 0 40px!important}
+  .product-page-hero .portal-container{gap:28px!important}
+  .product-page-hero h1{font-size:39px!important;line-height:1.03!important;letter-spacing:-1.7px!important}
+  .product-page-hero p{font-size:15px!important;line-height:1.6!important}
+  .product-page-hero-card{padding:22px!important;border-radius:20px!important}
+  .product-page-hero-card strong{font-size:22px!important}
+  .value-metric{padding:11px 0!important}
+
+  .shortcut-grid,.coverage-grid,.resource-grid,.developer-grid,.explain-grid{gap:14px!important}
+  .shortcut-card,.coverage-card,.resource-card,.developer-card,.explain-card{
+    min-height:0!important;padding:20px!important;border-radius:18px!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.96),0 12px 28px rgba(5,34,64,.10),0 3px 8px rgba(5,34,64,.045)!important;
+  }
+  .shortcut-card h3,.coverage-card h3,.resource-card h3,.developer-card h3,.explain-card h3{font-size:20px!important;margin-bottom:8px!important}
+  .shortcut-card p,.coverage-card p,.resource-card p,.developer-card p,.explain-card p{font-size:14px!important;line-height:1.52!important}
+  .status-pill,.step-pill{margin-bottom:14px!important}
+
+  .resource-card .resource-links{padding-top:14px!important;gap:7px!important}
+  .resource-card .resource-links a{font-size:12px!important}
+
+  .tool-card{padding:19px 20px!important}
+  .tool-card h3{font-size:19px!important}
+  .tool-id{font-size:10.5px;margin-bottom:11px;padding:5px 8px}
+
+  .one-address-banner{padding:24px!important;border-radius:20px!important;gap:18px!important}
+  .one-address-banner h2{font-size:31px!important;line-height:1.08!important}
+  .one-address-banner p{font-size:14px!important;line-height:1.55!important}
+  .one-address-banner strong{font-size:30px!important}
+
+  .portal-header-inner{gap:10px!important}
+  .portal-nav{gap:5px!important;padding-bottom:2px}
+  .portal-nav a{min-width:82px!important;padding:9px 6px 10px!important;gap:5px!important;font-size:10.5px!important;line-height:1.15!important}
+  .portal-nav a .nav-icon{width:29px;height:29px;border-radius:9px}
+  .portal-nav a .nav-icon svg{width:19px;height:19px}
+
+  .link-list{gap:10px!important}
+  .link-list a{padding:14px 15px!important;font-size:14px!important;border-radius:13px!important}
+}
+
+@media(max-width:420px){
+  .product-page-hero h1{font-size:36px!important}
+  .product-section-head h2{font-size:29px!important}
+  .portal-nav a{min-width:76px!important;font-size:10px!important}
+  .portal-brand small{max-width:245px}
+}
