@@ -35,6 +35,16 @@
   transform:none!important;opacity:1!important;box-shadow:0 0 12px rgba(64,205,211,.10)!important;
 }
 
+/* Entire Resources cards are clickable; secondary buttons remain independently clickable. */
+.clickable-resource-card{position:relative;cursor:pointer;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.clickable-resource-card .resource-card-main-link{position:absolute;inset:0;z-index:1;margin:0!important;padding:0!important;border-radius:inherit;text-decoration:none}
+.clickable-resource-card>.status-pill,.clickable-resource-card>h3,.clickable-resource-card>p{position:relative;z-index:2;pointer-events:none}
+.clickable-resource-card>.resource-links{position:relative;z-index:3;pointer-events:none}
+.clickable-resource-card>.resource-links a{pointer-events:auto}
+.clickable-resource-card:focus-within{outline:3px solid rgba(42,164,196,.22);outline-offset:3px}
+@media(hover:hover){.clickable-resource-card:hover{transform:translateY(-4px);border-color:#b8dce8!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.98),0 20px 42px rgba(5,48,78,.13)!important}.clickable-resource-card:hover h3{color:#086a91}}
+.status-context{background:#e7f5fb;color:#176b8f}
+
 /* External resource controls: no Unicode/emoji arrows. */
 .resource-card .resource-links a{
   display:inline-flex!important;align-items:center!important;gap:8px!important;
