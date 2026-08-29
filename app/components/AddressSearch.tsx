@@ -84,8 +84,8 @@ export default function AddressSearch() {
       <section className="portal-hero">
         <div className="portal-container hero-grid">
           <div className="hero-copy">
-            <h1>Find authoritative data for any U.S. address.</h1>
-            <p><strong>UtilityDataUSA</strong> is an agent-ready access layer that unifies utility, environmental, and risk data across fragmented sources.</p>
+            <h1>One address instead of ten websites.</h1>
+            <p>Enter a U.S. address once. <strong>UtilityDataUSA</strong> checks connected public sources and organizes the relevant evidence in one place — saving you from searching agency by agency.</p>
           </div>
           <div className="hero-search-card">
             <form onSubmit={submit}>
