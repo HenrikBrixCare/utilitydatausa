@@ -1,4 +1,5 @@
 import { getAddressProfile, type AddressProfile } from "./addressProfile";
+import { getWeatherContext, type WeatherContext } from "./weatherContext";
 
 type SourceStatus = "ok" | "no_data" | "error" | "limited" | "planned";
 
@@ -43,9 +44,10 @@ export type ExpandedAddressProfile = Omit<AddressProfile, "energy"> & {
   geography: CensusGeographyContext | null;
   energy: ExpandedEnergyContext;
   pipeline: PipelineContext | null;
+  weather: WeatherContext | null;
 };
 
-const USER_AGENT = "UtilityDataUSA/0.3 (+https://utilitydatausa.com)";
+const USER_AGENT = "UtilityDataUSA/0.4 (+https://utilitydatausa.com)";
 
 async function fetchWithTimeout(url: string | URL, init: RequestInit = {}, timeoutMs = 9000) {
   const controller = new AbortController();
@@ -248,13 +250,16 @@ export async function getExpandedAddressProfile(query: string): Promise<Expanded
         apiConfigured: Boolean(process.env.EIA_API_KEY),
         limitation: "No matched address was available, so location-based electric utility context was not generated."
       },
-      pipeline: null
+      pipeline: null,
+      weather: null
     };
   }
 
-  const geography = await getCensusGeography(base);
+  const geographyPromise = getCensusGeography(base);
+  const weatherPromise = getWeatherContext(base.address.latitude, base.address.longitude);
+  const [geography, weather] = await Promise.all([geographyPromise, weatherPromise]);
   const energy = await getEnergyContext(geography);
   const pipeline = getPipelineContext(geography);
 
-  return { ...base, geography, energy, pipeline };
+  return { ...base, geography, energy, pipeline, weather };
 }
