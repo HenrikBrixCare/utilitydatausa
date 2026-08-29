@@ -57,15 +57,16 @@ export function SiteFooter() {
           <div>
             <strong>UtilityDataUSA</strong>
             <p>One address instead of ten websites. Independent public-data infrastructure for faster research and better-informed decisions.</p>
+            <a href="https://brixcare.dk/en" target="_blank" rel="noreferrer">Developed by BrixCare ↗</a>
           </div>
         </div>
         <div><h3>Product</h3><Link href="/">Home</Link><Link href="/how-it-works">How It Works</Link><Link href="/data-coverage">Data Coverage</Link><Link href="/resources">Resources</Link><Link href="/developers">API & Developers</Link></div>
         <div><h3>Sources</h3><Link href="/resources#data-sources">Data Sources</Link><Link href="/resources#source-transparency">Source Transparency</Link><Link href="/resources#811">811 Safety</Link><Link href="/resources#official-tools">Official Tools</Link></div>
         <div><h3>Information</h3><Link href="/how-it-works">About UtilityDataUSA</Link><Link href="/resources#disclaimer">Legal & Disclaimers</Link><Link href="/resources#accessibility">Accessibility</Link><Link href="/resources#privacy">Privacy</Link></div>
-        <div><h3>Contact</h3><a href="mailto:info@brixcare.dk">info@brixcare.dk</a><a href="https://brixcare.dk" target="_blank" rel="noreferrer">BrixCare ↗</a></div>
+        <div><h3>Contact</h3><a href="mailto:info@brixcare.dk">info@brixcare.dk</a><a href="https://brixcare.dk/en" target="_blank" rel="noreferrer">BrixCare ↗</a></div>
       </div>
       <div className="portal-container footer-bottom">
-        <span>Independent public-data platform · Original sources remain traceable</span>
+        <span>Independent public-data platform · Original sources remain traceable · Developed by BrixCare</span>
         <nav><Link href="/resources#accessibility">Accessibility</Link><Link href="/resources#data-sources">Data Sources</Link><Link href="/resources#privacy">Privacy</Link><a href="mailto:info@brixcare.dk">Contact</a><Link href="/resources">Site Map</Link></nav>
       </div>
     </footer>
