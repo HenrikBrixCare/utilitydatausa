@@ -11,6 +11,7 @@ import "./product-polish.css";
 import "./coverage-dashboard.css";
 import "./context-expansion.css";
 import "./resource-footer-polish.css";
+import "./accessibility.css";
 import WebMCPTools from "./components/WebMCPTools";
 
 const siteUrl = "https://utilitydatausa.com";
@@ -41,7 +42,7 @@ export const metadata: Metadata = {
     description: "Search one U.S. address and organize connected public-data evidence and original sources in one place."
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "UtilityDataUSA | U.S. Public Data by Address",
     description: "One U.S. address. Connected public data. Original sources. One faster workflow."
   },
