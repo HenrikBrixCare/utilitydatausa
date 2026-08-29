@@ -10,6 +10,7 @@ import "./tech-arrow-fix.css";
 import "./product-polish.css";
 import "./coverage-dashboard.css";
 import "./context-expansion.css";
+import "./resource-footer-polish.css";
 import WebMCPTools from "./components/WebMCPTools";
 
 const siteUrl = "https://utilitydatausa.com";
