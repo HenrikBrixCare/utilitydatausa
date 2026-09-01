@@ -111,7 +111,7 @@ export default function WebMCPTools() {
       {
         name: "get_address_profile",
         title: "Get U.S. address profile",
-        description: "Build the normalized multi-source U.S. address profile including Census geography, FEMA, EPA, USGS, EIA electric context, PHMSA public pipeline context, and 811 guidance.",
+        description: "Build the normalized multi-source U.S. address profile including physical Census geography, FEMA, EPA, USGS water/elevation, NWS weather/alerts, USDA soils, optional EIA prices, PHMSA references and 811 guidance.",
         inputSchema: querySchema,
         annotations: { readOnlyHint: true, untrustedContentHint: true },
         execute: async (input, context) => stringify(await profileFor(input, context))
@@ -155,7 +155,7 @@ export default function WebMCPTools() {
       {
         name: "get_water_context",
         title: "Get USGS water context",
-        description: "Return nearby active USGS hydrologic monitoring sites around an address. Monitoring sites are not water-main or drinking-water service maps.",
+        description: "Return nearby USGS monitoring locations; modern fallback activity and completeness are limited. Monitoring sites are not water-main or drinking-water service maps.",
         inputSchema: querySchema,
         annotations: { readOnlyHint: true, untrustedContentHint: true },
         execute: async (input, context) => {
