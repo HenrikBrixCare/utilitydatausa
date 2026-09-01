@@ -43,9 +43,9 @@ Adapter:
 
 **Limitation:** FRS identifies regulated or program-linked facilities. Presence or absence of a returned facility is not a complete contamination determination or environmental due-diligence report.
 
-## LIVE — USGS Water Services
+## IMPLEMENTED — USGS Water Services and modern API fallback
 
-**Purpose:** identify nearby active hydrologic monitoring sites around the matched address.
+**Purpose:** identify nearby active hydrologic monitoring sites around the matched address. Spatial bounds use six decimal places. If the legacy service fails, the modern OGC monitoring-location API is tried; its returned subset is explicitly limited and is not represented as active or exhaustive. The modern fallback can work without a key; optional `USGS_API_KEY` enables its higher quota.
 
 Official documentation:
 - https://waterservices.usgs.gov/docs/site-service/
@@ -55,6 +55,24 @@ Adapter:
 - `lib/addressProfile.ts` → `getWaterContext`
 
 **Limitation:** USGS monitoring sites are not water-main maps and do not identify a property's drinking-water provider, sewer provider, water quality or service availability.
+
+## IMPLEMENTED — National Weather Service forecasts and alerts
+
+`lib/weatherContext.ts` calls `https://api.weather.gov/points/{latitude},{longitude}`, its validated NWS forecast URL, and `https://api.weather.gov/alerts/active?point={latitude},{longitude}`. Forecast and alert status are independent. No API key is required; a descriptive User-Agent is supplied. Up to six forecast periods and eight alerts are returned. Forecast/alert failures are not “no alerts”. Coverage depends on NWS services, especially outside the continental states.
+
+Official documentation: https://www.weather.gov/documentation/services-web-API
+
+## IMPLEMENTED — USGS 3DEP elevation
+
+`lib/groundContext.ts` queries `https://epqs.nationalmap.gov/v1/json` with numeric coordinates and meters. Elevation, resolution and acquisition date are preserved when available. This is modeled terrain at a geocoded point, not a building survey, flood certificate or excavation depth. No key is required.
+
+Official documentation: https://epqs.nationalmap.gov/v1/docs
+
+## IMPLEMENTED — USDA NRCS Soil Data Access
+
+`lib/groundContext.ts` posts a fixed read-only spatial SQL query to `https://sdmdataaccess.nrcs.usda.gov/Tabular/post.rest`. Only validated numeric coordinates are interpolated. It returns up to four map-unit components with percentage, hydrologic group, drainage and representative slope when recorded. Null attributes remain null. This is survey mapping, not an exact-point soil test or engineering recommendation. No key is required.
+
+Official documentation: https://sdmdataaccess.nrcs.usda.gov/webservicehelp.aspx
 
 ## PUBLIC CONTEXT — U.S. Energy Information Administration / EIA-861
 
@@ -78,7 +96,7 @@ Current behavior:
 
 ## PUBLIC CONTEXT — PHMSA National Pipeline Mapping System (NPMS)
 
-**Purpose:** add county/ZIP-aware public pipeline context and route users to official PHMSA tools.
+**Purpose:** attach geographic context and route users to official PHMSA tools. The application does not retrieve pipeline geometry or run a pipeline search; the viewer and directory are explicit external references.
 
 Official public tools:
 - https://www.npms.phmsa.dot.gov/GeneralPublic
@@ -93,7 +111,7 @@ Adapter:
 
 ## FOLLOW-UP — 811 / state one-call systems
 
-**Purpose:** preserve the legal/safety handoff to the applicable state excavation-notification and locating process.
+**Purpose:** preserve the handoff to the applicable physical-state excavation-notification and locating process. State comes from Census coordinate geography, not the mailing address; when geography is unavailable, jurisdiction must be verified.
 
 Official national starting point:
 - https://call811.com/811-in-your-state/
@@ -120,4 +138,4 @@ Each adapter should declare geographic scope, source authority, access method, u
 
 ## Source-health policy
 
-GitHub Actions checks core public endpoints. A connector can remain implemented while temporarily unavailable, but the product response must return a source error or limited-context state rather than silently turning an unavailable lookup into a conclusion.
+GitHub Actions runs the actual adapters weekly (Monday 07:00 UTC) and on manual request, preserving a report artifact and a failing status when a source is unavailable. A connector can remain implemented while temporarily unavailable, but the product response must return a source error or limited-context state rather than silently turning an unavailable lookup into a conclusion.

@@ -1,0 +1,4 @@
+Contact: mailto:info@brixcare.dk
+Expires: 2027-08-29T23:59:59Z
+Canonical: https://utilitydatausa.com/.well-known/security.txt
+Preferred-Languages: en, da

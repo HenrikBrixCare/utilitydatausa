@@ -1,94 +1,41 @@
-# UtilityDataUSA Architecture
+# UtilityDataUSA architecture
 
-## Product principle
+## Data flow
 
-UtilityDataUSA is a U.S.-focused access and normalization layer for fragmented property, utility, environmental and risk information.
+1. Normalize and validate the U.S. street-address query (3–250 characters).
+2. Geocode once with Census. A no-match or service failure stops downstream lookups.
+3. In parallel, retrieve coordinate-based Census geography, FEMA flood context, EPA facilities, USGS monitoring locations, NWS forecasts/alerts, USGS elevation and USDA soil context.
+4. Use verified physical state/county for EIA enrichment and 811 guidance. A mailing state is never substituted when geographic jurisdiction is unknown.
+5. Return a normalized profile to the UI, REST endpoints, browser WebMCP and remote MCP.
+6. On an explicit AI request, retrieve a server-built profile and submit only that structured evidence to OpenAI. Return the profile alongside the interpretation so the UI displays the evidence actually analyzed.
 
-Core flow:
+`lib/expandedAddressProfile.ts` owns aggregation and a bounded in-process cache: 100 entries, up to two minutes; failed profiles are removed and source-error profiles expire after 15 seconds. Concurrent identical requests share their pending work. This is neither persistent history nor a distributed cache.
 
-`U.S. address -> Census match -> parallel federal/state/local adapters -> normalized evidence -> human UI + WebMCP tools`
+`lib/sourceFetch.ts` supplies source deadlines, a descriptive User-Agent, no-store requests and at most one retry for 502/503/504 within the same deadline. Source-specific fallback paths are explicit. No source failure becomes a negative property finding.
 
-The address is the common key, but every downstream result keeps its own source role and limitation. UtilityDataUSA does not flatten different authorities into a fake single source of truth.
+## Adapter boundaries
 
-## Live architecture
+- `lib/addressProfile.ts`: Census matching, FEMA, EPA, USGS water and generic 811 handoff.
+- `lib/geography.ts`: Census FIPS-to-state mapping, six-decimal spatial boxes, missing numeric value handling.
+- `lib/expandedAddressProfile.ts`: physical geography, optional EIA prices, PHMSA references and final 811 state.
+- `lib/weatherContext.ts`: independent NWS forecast/alert requests. A forecast can work while alerts fail.
+- `lib/groundContext.ts`: USGS terrain and USDA fixed read-only coordinate query.
+- `lib/dataSources.ts`: versioned connector capability catalog, independent of stale database rows.
 
-### 1. Address resolution
+All results retain source URL, source status and limitations. `generatedAt` is the lookup time, not a claim that every underlying dataset was collected then. Elevation acquisition date and EIA price period are retained when supplied.
 
-The U.S. Census Bureau Geocoding Services adapter resolves the submitted street address to a matched address and coordinates.
+## Interfaces and privacy
 
-### 2. Parallel public-source adapters
+The human UI and agent interfaces use the same aggregation. The REST profile endpoint is `/api/webmcp/address-profile?q=…`; address-only search is `/api/webmcp/address-search?q=…`. Browser WebMCP exposes 14 tools, including explicitly invoked AI interpretation. Remote MCP exposes 11 read-only tools and no paid AI call.
 
-Once coordinates exist, the current aggregated profile runs these independent lookups in parallel:
+Address searches go to Census; coordinates go to relevant public sources. An explicit AI request sends the structured address evidence to OpenAI with `store:false`. That setting does not make a promise about all provider/platform logs. Search URLs may occur in browser history and platform request logs. This release does not save searches to Supabase.
 
-- FEMA National Flood Hazard Layer flood-zone context.
-- EPA Facility Registry Service nearby-facility screening.
-- USGS Water Services nearby active hydrologic monitoring sites.
-- State-aware 811 follow-up guidance derived from the matched address state.
+The dedicated Supabase project and protected tables are retained for future authenticated features. Existing data is not modified by this release. Database connection credentials are unnecessary for the deployed source catalog.
 
-Electric utility/service-territory context remains explicitly planned until a sufficiently authoritative address-safe adapter is validated.
+## Deployment and operations
 
-### 3. Normalized address profile
+Keep the existing Next.js/Vercel project and GitHub repository. One `next.config.mjs` contains headers and framework configuration. The lockfile fixes production dependencies. GitHub Actions separates deterministic build/regression checks from scheduled upstream availability checks.
 
-`lib/addressProfile.ts` normalizes source-specific responses into one address-profile structure while keeping:
+`/api/health` reports application readiness and optional integration configuration as booleans; it does not expose secrets or certify that upstreams work. Weekly source monitoring runs the actual aggregation without invoking OpenAI. See TESTING.md.
 
-- per-source status: `ok`, `no_data`, `error`, `limited` or `planned`
-- source-specific evidence
-- source URL
-- source-specific limitation
-- overall decision-support limitation
-- generated time
-
-An unavailable source returns an error state; it is never silently converted into a negative finding.
-
-### 4. Human interface
-
-`app/components/AddressSearch.tsx` renders the same normalized address profile as compact cards for a human user.
-
-### 5. WebMCP interface
-
-`app/components/WebMCPTools.tsx` registers read-only tools through `document.modelContext` when supported by the host.
-
-Current tools:
-
-- `get_utilitydatausa_context`
-- `find_us_address`
-- `get_address_profile`
-- `get_flood_context`
-- `get_environment_screening`
-- `get_water_context`
-- `get_811_guidance`
-- `list_authoritative_sources`
-
-This means the human UI and the agent interface operate on the same source boundaries rather than two unrelated implementations.
-
-## Supabase role
-
-UtilityDataUSA has its own Supabase project. The public `data_sources` catalog stores connector status and source metadata. Address-profile and source-result tables are protected with RLS and are not publicly writable/readable by default.
-
-The current live federal lookups are fetched on demand; Supabase is the foundation for source catalog, future profile history, caching/normalization metadata and later authenticated product features.
-
-## Testing architecture
-
-GitHub Actions performs:
-
-1. TypeScript typecheck.
-2. Next.js production build.
-3. External smoke checks against the current Census, FEMA, EPA and USGS public endpoints.
-
-Vercel additionally builds every pull request as a preview before production merge.
-
-## Planned adapters
-
-- EIA plus state/local electric utility/service-territory data.
-- County parcel/property assessor data.
-- State GIS/open-data portals.
-- Water/sewer districts and public utility commissions.
-- Selected municipal and investor-owned utility public data.
-
-Each adapter must declare geographic scope, authority, access method, freshness and limitations before it can be labeled live.
-
-## Safety boundary
-
-UtilityDataUSA is decision support. It must never represent an address-level approximation, public map, county-level service territory or AI interpretation as proof of underground line position or excavation clearance.
-
-Before excavation, users must follow the applicable state 811 / one-call process and any required field-locating, engineering and permitting procedures.
+Rate limits and source caches are bounded per process. They reduce accidental repeated calls but do not provide a platform-wide cost cap or protection against a distributed attacker. A shared quota/WAF is still needed before a high-volume public launch.

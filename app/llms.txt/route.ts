@@ -18,6 +18,12 @@ Core value proposition: One address instead of ten websites.
 - Flood context: FEMA National Flood Hazard Layer
 - Environmental screening: U.S. EPA Facility Registry Service
 - Water monitoring context: U.S. Geological Survey
+- Weather and alerts: NWS, with separate forecast and alert source statuses
+- Terrain: USGS 3DEP model elevation, not a survey
+- Soils: USDA map-unit context, not a site investigation
+- Remote MCP: /api/mcp (11 tools; Streamable HTTP; protocol 2025-11-25)
+- OpenAPI: /api/openapi
+- Source catalog: /api/sources
 - Excavation safety follow-up: state-aware 811 / one-call guidance
 - Electric utility context: planned / expanding
 - Pipeline context: planned / expanding

@@ -1,78 +1,30 @@
-# UtilityDataUSA WebMCP Security
+# UtilityDataUSA API and agent boundaries
 
-## Current tool model
+## Read-only remote MCP
 
-UtilityDataUSA currently registers read-only WebMCP tools in the browser when `document.modelContext` is available.
+`/api/mcp` exposes 11 read-only tools through stateless HTTP POST JSON-RPC. Supported versions are explicitly negotiated. GET returns 405; notifications return 202 without a JSON-RPC response. Invalid input, unknown tools, unsupported version headers and unapproved browser origins produce controlled errors. Tool responses preserve structured evidence and source limitations. Remote MCP has no paid AI, writes, ticket creation, permits, purchases or messages.
 
-The tools retrieve and summarize public-source decision-support context. They do not create tickets, modify government records, buy products, send messages, submit permits or perform destructive actions.
+Browser WebMCP exposes 14 tools when `document.modelContext` is available, including explicit AI interpretation. AI is not called by ordinary source-profile tools.
 
-## Read-only design
+## Input and source validation
 
-Current tool annotations use `readOnlyHint: true`.
+- Address queries are 3–250 characters; JSON request bodies are limited to 8 KiB, including chunked bodies.
+- Public-source endpoints are fixed. NWS forecast URLs must be HTTPS on `api.weather.gov`.
+- USDA queries are fixed read-only SQL with only validated numeric coordinates interpolated.
+- Source bodies are parsed as data. They are never evaluated as code or model instructions.
+- OpenAI instructions treat source-returned text as untrusted evidence and use a strict structured output schema.
+- Missing values and service errors do not become zero, “clear”, “safe” or “no risk”. Geographic state is derived from coordinates; postal state never supplies excavation jurisdiction.
 
-This is intentional. The first challenge version should prove that an agent can safely discover and use fragmented public data before any workflow is allowed to perform external mutations.
+## Rate limits and secrets
 
-## Untrusted external content
+Per-process limits: 30 source requests/minute/client, 60 MCP requests/minute/client and 3 AI requests/10 minutes/client. Buckets are bounded. This is basic throttling, not a distributed quota or a guaranteed spend cap. Platform firewall/shared quotas remain a future operational requirement at scale.
 
-Address and public-source responses are treated as untrusted external content.
+`OPENAI_API_KEY`, `EIA_API_KEY` and optional `USGS_API_KEY` stay server-side. `/api/health` exposes configuration booleans only. No private key is needed in browser code or MCP results. The existing Supabase RLS setup is preserved; this release does not write searches to it.
 
-For tools that return address/source data, `untrustedContentHint` is enabled. The application does not treat text from an upstream public system as instructions for the model or browser.
+## Data flow
 
-## Source boundaries
+Addresses are sent to Census, coordinates to public-source APIs, and structured evidence to OpenAI only when AI interpretation is requested. OpenAI requests use `store:false`; this is not a blanket retention guarantee. Brief in-memory source caching, browser history and platform request logging are separate concerns. Shared search links contain the address.
 
-A tool response should distinguish:
+## Interpretation limits
 
-- the matched address
-- the public agency/source
-- the connector state
-- the returned evidence
-- the source-specific limitation
-- the overall UtilityDataUSA limitation
-
-An agent should not merge these into stronger claims than the source supports.
-
-## 811 / excavation boundary
-
-This is a hard product rule:
-
-UtilityDataUSA does **not** locate underground lines and does **not** provide excavation clearance.
-
-`get_811_guidance` is a handoff tool. It directs the workflow toward the official state 811 / one-call process. It must never be described as an alternative to:
-
-- an 811 ticket
-- utility-owner responses
-- field marks
-- private-utility locating where needed
-- potholing/test holes
-- engineering review
-- permits or required clearances
-
-## Flood boundary
-
-FEMA NFHL output is flood-hazard mapping context. A point-in-polygon result is not a survey, elevation certificate, insurance determination or guarantee that flooding will or will not occur.
-
-## Environmental boundary
-
-EPA FRS nearby-facility results are screening context, not a contamination determination, Phase I environmental site assessment or complete due-diligence report.
-
-## Water boundary
-
-USGS monitoring-site results describe hydrologic monitoring locations. They are not maps of water mains, sewer lines, water utility ownership, drinking-water quality or service availability.
-
-## Electric utility boundary
-
-Electric utility/service territory is currently marked `planned`. The agent must not infer a serving utility from county-level or other approximate territory data until a validated adapter exists.
-
-## Credentials
-
-Only the Supabase publishable key is intended for browser-accessible configuration. Service-role keys, private API keys and future OpenAI credentials must remain server-side and must never be committed to the public repository or exposed through WebMCP tool results.
-
-## Supabase
-
-The public source catalog is readable. Address-profile and source-result tables have RLS enabled and are not publicly exposed by default.
-
-Future authenticated history/caching features should add narrowly scoped RLS policies rather than disabling RLS.
-
-## Future write tools
-
-If UtilityDataUSA later introduces actions such as saved profiles, notifications or workflow submissions, those should be separate tools with explicit authorization, confirmation and mutation annotations. The current read-only tools should remain read-only.
+FEMA is flood mapping, EPA is facility screening, USGS water data is monitoring-location context, terrain is a model and USDA soil mapping is not a site investigation. EIA state prices are averages; EIA-861 and PHMSA links do not confirm a serving utility or retrieve underground line positions. The toolset does not locate utilities, issue 811 tickets, authorize excavation or replace engineering, surveys, environmental due diligence or official authority records.

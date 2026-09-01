@@ -1,17 +1,18 @@
 {
   "name": "utilitydatausa",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "private": false,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/regression-tests.mjs"
   },
   "dependencies": {
-    "next": "^15.5.0",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "next": "15.5.25",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

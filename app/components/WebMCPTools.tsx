@@ -39,7 +39,7 @@ async function postJson(path: string, body: unknown, context?: ToolContext) {
 
 function validQuery(input: Record<string, unknown>) {
   const query = typeof input.query === "string" ? input.query.trim() : "";
-  return query.length >= 3 ? query : null;
+  return query.length >= 3 && query.length <= 250 ? query : null;
 }
 
 async function profileFor(input: Record<string, unknown>, context?: ToolContext) {
@@ -61,7 +61,7 @@ export default function WebMCPTools() {
     const querySchema = {
       type: "object",
       properties: {
-        query: { type: "string", minLength: 3, description: "U.S. street address, preferably including city, state and ZIP code." }
+        query: { type: "string", minLength: 3, maxLength: 250, description: "U.S. street address, preferably including city, state and ZIP code." }
       },
       required: ["query"]
     };
@@ -82,6 +82,9 @@ export default function WebMCPTools() {
             "FEMA National Flood Hazard Layer point lookup",
             "EPA Facility Registry Service nearby-facility screening",
             "USGS Water Services nearby hydrologic monitoring sites",
+            "NWS forecasts and independently checked weather alerts",
+            "USGS 3DEP terrain-model elevation",
+            "USDA soil-survey map-unit context",
             "OpenAI evidence interpretation using the normalized address profile"
           ],
           limited: [
@@ -108,7 +111,7 @@ export default function WebMCPTools() {
       {
         name: "get_address_profile",
         title: "Get U.S. address profile",
-        description: "Build the normalized multi-source U.S. address profile including Census geography, FEMA, EPA, USGS, EIA electric context, PHMSA public pipeline context, and 811 guidance.",
+        description: "Build the normalized multi-source U.S. address profile including physical Census geography, FEMA, EPA, USGS water/elevation, NWS weather/alerts, USDA soils, optional EIA prices, PHMSA references and 811 guidance.",
         inputSchema: querySchema,
         annotations: { readOnlyHint: true, untrustedContentHint: true },
         execute: async (input, context) => stringify(await profileFor(input, context))
@@ -152,7 +155,7 @@ export default function WebMCPTools() {
       {
         name: "get_water_context",
         title: "Get USGS water context",
-        description: "Return nearby active USGS hydrologic monitoring sites around an address. Monitoring sites are not water-main or drinking-water service maps.",
+        description: "Return nearby USGS monitoring locations; modern fallback activity and completeness are limited. Monitoring sites are not water-main or drinking-water service maps.",
         inputSchema: querySchema,
         annotations: { readOnlyHint: true, untrustedContentHint: true },
         execute: async (input, context) => {
@@ -198,24 +201,39 @@ export default function WebMCPTools() {
         }
       },
       {
+        name: "get_weather_context", title: "Get NWS weather and alerts", description: "Return NWS weather and alerts with source status and limitations.",
+        inputSchema: querySchema, annotations: { readOnlyHint: true, untrustedContentHint: true },
+        execute: async (input, context) => {
+          const profile = await profileFor(input, context);
+          const result = profile.result as Record<string, unknown>;
+          return stringify({ ok: profile.ok, address: result.address, generatedAt: result.generatedAt, weather: result.weather, limitation: result.limitation });
+        }
+      },
+      {
+        name: "get_elevation_context", title: "Get USGS terrain elevation", description: "Return USGS terrain elevation with source status and limitations.",
+        inputSchema: querySchema, annotations: { readOnlyHint: true, untrustedContentHint: true },
+        execute: async (input, context) => {
+          const profile = await profileFor(input, context);
+          const result = profile.result as Record<string, unknown>;
+          return stringify({ ok: profile.ok, address: result.address, generatedAt: result.generatedAt, terrain: result.terrain, limitation: result.limitation });
+        }
+      },
+      {
+        name: "get_soil_context", title: "Get USDA soil-survey context", description: "Return USDA soil-survey context with source status and limitations.",
+        inputSchema: querySchema, annotations: { readOnlyHint: true, untrustedContentHint: true },
+        execute: async (input, context) => {
+          const profile = await profileFor(input, context);
+          const result = profile.result as Record<string, unknown>;
+          return stringify({ ok: profile.ok, address: result.address, generatedAt: result.generatedAt, soil: result.soil, limitation: result.limitation });
+        }
+      },
+      {
         name: "list_authoritative_sources",
         title: "List authoritative U.S. sources",
         description: "List the authoritative public sources and current connector state used by UtilityDataUSA. OpenAI is listed separately as an interpretation layer, not an authoritative source.",
         inputSchema: { type: "object", properties: {} },
         annotations: { readOnlyHint: true, untrustedContentHint: false },
-        execute: () => stringify({
-          ok: true,
-          sources: [
-            { name: "U.S. Census Bureau Geocoding Services", status: "live", role: "address matching, coordinates and county/state geography" },
-            { name: "FEMA National Flood Hazard Layer", status: "live", role: "regulatory flood-hazard zone context" },
-            { name: "EPA Facility Registry Service", status: "live", role: "nearby regulated/program-linked facility screening" },
-            { name: "USGS Water Services", status: "live", role: "nearby hydrologic monitoring sites" },
-            { name: "U.S. Energy Information Administration / EIA-861", status: "limited", role: "county/state utility context and optional state residential price context" },
-            { name: "PHMSA National Pipeline Mapping System", status: "limited", role: "county/ZIP-aware public pipeline and operator context; not exact line locating" },
-            { name: "Call 811 / state one-call systems", status: "follow-up", role: "official pre-excavation process" }
-          ],
-          interpretation: { name: "OpenAI", status: "live", role: "structured evidence interpretation; not an authoritative data source" }
-        })
+        execute: async (_input, context) => stringify(await getJson("/api/sources", context))
       }
     ];
 
