@@ -1,4 +1,7 @@
-import { getAddressProfile, type AddressProfile } from "./addressProfile";
+import { stateFromFips } from "./geography";
+import { fetchSource } from "./sourceFetch";
+import { getTerrainContext, getSoilContext, type TerrainContext, type SoilContext } from "./groundContext";
+import { getAddressProfile, geocodeAddress, get811Guidance, type AddressProfile, type AddressMatch } from "./addressProfile";
 import { getWeatherContext, type WeatherContext } from "./weatherContext";
 
 type SourceStatus = "ok" | "no_data" | "error" | "limited" | "planned";
@@ -45,19 +48,13 @@ export type ExpandedAddressProfile = Omit<AddressProfile, "energy"> & {
   energy: ExpandedEnergyContext;
   pipeline: PipelineContext | null;
   weather: WeatherContext | null;
+  terrain: TerrainContext | null;
+  soil: SoilContext | null;
 };
 
-const USER_AGENT = "UtilityDataUSA/0.4 (+https://utilitydatausa.com)";
+const USER_AGENT = "UtilityDataUSA/0.5 (+https://utilitydatausa.com)";
 
-async function fetchWithTimeout(url: string | URL, init: RequestInit = {}, timeoutMs = 9000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
-}
+const fetchWithTimeout = fetchSource;
 
 function firstRecord(groups: Record<string, unknown> | undefined, needle: string) {
   if (!groups) return null;
@@ -78,8 +75,8 @@ function text(record: Record<string, unknown> | null, ...keys: string[]) {
   return null;
 }
 
-function addressComponent(profile: AddressProfile, ...keys: string[]) {
-  const components = profile.address?.addressComponents ?? {};
+function addressComponent(address: AddressMatch, ...keys: string[]) {
+  const components = address.addressComponents ?? {};
   for (const key of keys) {
     const direct = components[key];
     if (direct) return direct;
@@ -89,12 +86,10 @@ function addressComponent(profile: AddressProfile, ...keys: string[]) {
   return null;
 }
 
-async function getCensusGeography(profile: AddressProfile): Promise<CensusGeographyContext | null> {
-  const address = profile.address;
+export async function getCensusGeography(address: AddressMatch): Promise<CensusGeographyContext | null> {
   if (!address) return null;
   const sourceUrl = "https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html";
-  const fallbackState = addressComponent(profile, "state");
-  const fallbackZip = addressComponent(profile, "zip", "zipCode");
+  const fallbackZip = addressComponent(address, "zip", "zipCode");
 
   try {
     const endpoint = new URL("https://geocoding.geo.census.gov/geocoder/geographies/coordinates");
@@ -107,7 +102,7 @@ async function getCensusGeography(profile: AddressProfile): Promise<CensusGeogra
     const response = await fetchWithTimeout(endpoint, {
       headers: { Accept: "application/json", "User-Agent": USER_AGENT },
       cache: "no-store"
-    });
+    }, 12000);
     if (!response.ok) throw new Error(`census_geo_${response.status}`);
 
     const data = await response.json() as { result?: { geographies?: Record<string, unknown> } };
@@ -119,7 +114,7 @@ async function getCensusGeography(profile: AddressProfile): Promise<CensusGeogra
 
     return {
       status: county || state ? "ok" : "no_data",
-      stateCode: fallbackState,
+      stateCode: stateFromFips(stateFips),
       stateName: text(state, "NAME"),
       stateFips,
       countyName: text(county, "NAME"),
@@ -131,14 +126,14 @@ async function getCensusGeography(profile: AddressProfile): Promise<CensusGeogra
   } catch {
     return {
       status: "error",
-      stateCode: fallbackState,
+      stateCode: null,
       stateName: null,
       stateFips: null,
       countyName: null,
       countyFips: null,
       zip: fallbackZip,
       sourceUrl,
-      limitation: "Census geography could not be reached for this lookup. State information may still come from the matched address, but county-level conclusions should not be drawn."
+      limitation: "Census geography could not be reached for this lookup. Physical jurisdiction is unverified; a postal state is not used for excavation guidance."
     };
   }
 }
@@ -232,34 +227,48 @@ function getPipelineContext(geography: CensusGeographyContext | null): PipelineC
   };
 }
 
-export async function getExpandedAddressProfile(query: string): Promise<ExpandedAddressProfile> {
-  const base = await getAddressProfile(query);
-  if (!base.address) {
-    return {
-      ...base,
-      geography: null,
-      energy: {
-        status: "limited",
-        state: null,
-        county: null,
-        countyFips: null,
-        residentialPriceCentsPerKwh: null,
-        pricePeriod: null,
-        sourceUrl: "https://www.eia.gov/opendata/",
-        serviceTerritoryUrl: "https://www.eia.gov/electricity/data/eia861/",
-        apiConfigured: Boolean(process.env.EIA_API_KEY),
-        limitation: "No matched address was available, so location-based electric utility context was not generated."
-      },
-      pipeline: null,
-      weather: null
-    };
-  }
+type CachedProfile = { expires: number; value: Promise<ExpandedAddressProfile> };
+const profileCache = new Map<string, CachedProfile>();
 
-  const geographyPromise = getCensusGeography(base);
-  const weatherPromise = getWeatherContext(base.address.latitude, base.address.longitude);
-  const [geography, weather] = await Promise.all([geographyPromise, weatherPromise]);
-  const energy = await getEnergyContext(geography);
-  const pipeline = getPipelineContext(geography);
+export function getExpandedAddressProfile(query: string): Promise<ExpandedAddressProfile> {
+  const normalized = query.replace(/\s+/g, " ").trim();
+  if (normalized.length < 3 || normalized.length > 250) throw new Error("invalid_query");
+  const key = normalized.toLowerCase();
+  const cached = profileCache.get(key);
+  if (cached && cached.expires > Date.now()) return cached.value;
+  if (profileCache.size >= 100) profileCache.delete(profileCache.keys().next().value!);
+  const value = buildProfile(normalized);
+  profileCache.set(key, { expires: Date.now() + 120_000, value });
+  void value.then(profile => {
+    if (!profile.ok || !profile.address) profileCache.delete(key);
+    else if ([profile.flood, profile.environment, profile.water, profile.weather, profile.terrain, profile.soil, profile.geography].some(s => s?.status === "error")) {
+      const entry = profileCache.get(key);
+      if (entry?.value === value) entry.expires = Date.now() + 15_000;
+    }
+  }).catch(() => profileCache.delete(key));
+  return value;
+}
 
-  return { ...base, geography, energy, pipeline, weather };
+async function buildProfile(query: string): Promise<ExpandedAddressProfile> {
+  let matches: AddressMatch[] = [];
+  let failed = false;
+  try { matches = await geocodeAddress(query); } catch { failed = true; }
+  const address = matches[0];
+  if (!address) return {
+    ok: !failed, query, address: null, flood: null, environment: null, water: null,
+    excavation811: null, geography: null, pipeline: null, weather: null, terrain: null, soil: null,
+    energy: await getEnergyContext(null), generatedAt: new Date().toISOString(),
+    ...(failed ? { error: "address_profile_unavailable" } : {}),
+    limitation: failed ? "Census could not be reached. No location-based conclusion can be drawn." : "No Census match was found. Downstream sources were not queried."
+  };
+  const geographyPromise = getCensusGeography(address);
+  const [base, geography, weather, terrain, soil, energy] = await Promise.all([
+    getAddressProfile(query, address), geographyPromise,
+    getWeatherContext(address.latitude, address.longitude),
+    getTerrainContext(address.latitude, address.longitude),
+    getSoilContext(address.latitude, address.longitude),
+    geographyPromise.then(getEnergyContext)
+  ]);
+  return { ...base, geography, energy, pipeline: getPipelineContext(geography), weather, terrain, soil,
+    excavation811: get811Guidance(geography?.stateCode ?? null) };
 }

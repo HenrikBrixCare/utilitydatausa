@@ -1,62 +1,28 @@
-# UtilityDataUSA — Final Challenge Checklist
+# UtilityDataUSA implementation and release checklist
 
-## Product
+## Implemented in this release
 
-- [x] Public GitHub repository.
-- [x] Separate UtilityDataUSA Supabase project.
-- [x] Stable Vercel project and production deployment.
-- [x] Human address-search/profile workflow.
-- [x] Census address geocoding live.
-- [x] FEMA NFHL flood context live.
-- [x] EPA FRS environmental facility screening live.
-- [x] USGS Water Services monitoring-site context live.
-- [x] 811 state-aware follow-up boundary implemented.
-- [x] Electric utility clearly marked planned.
+- [x] Preserve the existing GitHub/Vercel project and production design.
+- [x] Correct physical state/county and 811 guidance when mailing state differs.
+- [x] Census, FEMA, EPA and USGS water adapters with explicit failure states.
+- [x] USGS six-decimal coordinate fix and modern water API fallback.
+- [x] NWS independent forecasts/alerts, USGS elevation, USDA soil survey.
+- [x] Optional EIA state price adapter; honest PHMSA and EIA-861 references.
+- [x] Existing OpenAI interpretation with returned evidence alignment.
+- [x] Source links, evidence JSON export, shared search link and print styles.
+- [x] 14 browser WebMCP tools and 11 remote read-only MCP tools.
+- [x] Public source catalog, OpenAPI document and readiness endpoint.
+- [x] Input/body/origin checks, basic rate limiting and bounded caching.
+- [x] Lockfile, regression tests, typecheck and production build.
+- [x] Weekly GitHub source-check workflow plus downloadable run report.
 
-## WebMCP
+## External or launch work still outstanding
 
-- [x] `get_utilitydatausa_context`
-- [x] `find_us_address`
-- [x] `get_address_profile`
-- [x] `get_flood_context`
-- [x] `get_environment_screening`
-- [x] `get_water_context`
-- [x] `get_811_guidance`
-- [x] `list_authoritative_sources`
-- [x] Current tools are read-only.
-- [x] Untrusted external source content is marked accordingly.
+- [ ] Attach `utilitydatausa.com` to the existing Vercel project and configure its registrar/DNS. Ownership was reported; the domain was absent from Vercel’s project domains at the audit.
+- [ ] Supply a verified EIA API key through the normal owner-controlled registration/configuration flow if electricity price enrichment is desired. No placeholder/demo key is used.
+- [ ] Add optional USGS higher-quota key if traffic requires it.
+- [ ] Shared quotas/platform firewall and an agreed AI spend limit before substantial public traffic.
+- [ ] Jurisdiction-specific parcel, zoning, permit, utility supplier and service-territory coverage; no blanket nationwide completion claim.
+- [ ] Final challenge video/submission only when the destination and required fields are known.
 
-## Quality
-
-- [x] TypeScript typecheck in CI.
-- [x] Next.js production build in CI.
-- [x] Census source smoke test.
-- [x] FEMA source smoke test.
-- [x] EPA source smoke test.
-- [x] USGS source smoke test.
-- [x] Vercel preview deployment on pull requests.
-- [x] Source errors kept distinct from no-data findings.
-
-## Safety / trust
-
-- [x] No claim of underground line location.
-- [x] No claim that UtilityDataUSA replaces 811.
-- [x] FEMA result limitations documented.
-- [x] EPA screening limitations documented.
-- [x] USGS monitoring-site limitations documented.
-- [x] EIA/service territory not mislabeled as address-level proof.
-- [x] Private Supabase tables protected with RLS.
-- [x] No service-role or private API key committed to the public repo.
-
-## Submission assets still needed
-
-- [ ] Purchase/connect `UtilityDataUSA.com` when ready.
-- [ ] Final visual polish after the multi-source production UI is reviewed.
-- [ ] Record final 2–3 minute challenge video.
-- [ ] Capture final screenshots.
-- [ ] Write/paste final submission description when the official form/fields are known.
-- [ ] Add dedicated OpenAI Platform project/key when an AI interpretation layer is actually introduced.
-
-## Release rule
-
-Do not mark a source or feature complete because documentation exists. The status changes only when the adapter is implemented, tested and visible in the product or tool surface.
+A source being implemented does not guarantee current availability. Read the latest source-health run and deployment record for operational status. GitHub weekly monitoring is separate from ChatGPT Automations; no existing personal automation is disabled to make room.

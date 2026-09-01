@@ -1,72 +1,11 @@
-const timeout = (ms = 15000) => AbortSignal.timeout(ms);
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function fetchRetry(name, url, accept, attempts = 3) {
-  let lastError;
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    try {
-      const response = await fetch(url, {
-        headers: { Accept: accept, "User-Agent": "UtilityDataUSA-source-smoke/0.4 (+https://utilitydatausa.com)" },
-        signal: timeout()
-      });
-      if (!response.ok) throw new Error(`${name}: HTTP ${response.status}`);
-      if (attempt > 1) console.log(`RECOVERED ${name} on attempt ${attempt}`);
-      return response;
-    } catch (error) {
-      lastError = error;
-      if (attempt < attempts) {
-        console.log(`RETRY ${name} after attempt ${attempt}`);
-        await wait(1000 * attempt);
-      }
-    }
-  }
-  throw lastError;
-}
-
-async function expectJson(name, url, validate, accept = "application/json") {
-  const response = await fetchRetry(name, url, accept);
-  const data = await response.json();
-  if (!validate(data)) throw new Error(`${name}: unexpected response shape`);
-  console.log(`PASS ${name}`);
-}
-
-async function expectText(name, url, validate) {
-  const response = await fetchRetry(name, url, "text/plain");
-  const data = await response.text();
-  if (!validate(data)) throw new Error(`${name}: unexpected response shape`);
-  console.log(`PASS ${name}`);
-}
-
-const address = encodeURIComponent("4600 Silver Hill Rd, Washington, DC 20233");
-await expectJson(
-  "Census Geocoder",
-  `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${address}&benchmark=Public_AR_Current&format=json`,
-  (data) => Array.isArray(data?.result?.addressMatches) && data.result.addressMatches.length > 0
-);
-
-await expectJson(
-  "FEMA NFHL",
-  "https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/28/query?where=1%3D1&geometry=-76.928366%2C38.845053&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=FLD_ZONE%2CZONE_SUBTY%2CSFHA_TF&returnGeometry=false&f=json",
-  (data) => !data?.error && Array.isArray(data?.features)
-);
-
-await expectText(
-  "USGS Water Services",
-  "https://waterservices.usgs.gov/nwis/site/?format=rdb&bBox=-77.01,38.76,-76.85,38.93&siteStatus=active&siteOutput=basic",
-  (data) => data.includes("agency_cd") && data.includes("site_no")
-);
-
-await expectJson(
-  "EPA FRS",
-  "https://ofmpub.epa.gov/frs_public2/frs_rest_services.get_facilities?latitude83=38.8&longitude83=-77.01&search_radius=1&output=JSON",
-  (data) => data !== null && typeof data === "object"
-);
-
-await expectJson(
-  "National Weather Service",
-  "https://api.weather.gov/points/38.8451,-76.9284",
-  (data) => typeof data?.properties?.forecast === "string" && typeof data?.properties?.forecastOffice === "string",
-  "application/geo+json, application/json;q=0.9"
-);
-
-console.log("All authoritative source smoke checks passed.");
+import { createLoader } from './load-typescript.mjs';
+const load = createLoader();
+const { getExpandedAddressProfile } = load('lib/expandedAddressProfile.ts');
+const query = process.env.SMOKE_ADDRESS || '4600 Silver Hill Rd, Washington, DC 20233';
+const started = Date.now();
+const profile = await getExpandedAddressProfile(query);
+const statuses = Object.fromEntries(['geography','flood','environment','water','weather','terrain','soil','energy','pipeline','excavation811'].map(key => [key, profile[key]?.status ?? 'not_checked']));
+console.log(JSON.stringify({ address: profile.address?.matchedAddress, coordinates: profile.address ? [profile.address.longitude, profile.address.latitude] : null, elapsedSeconds: (Date.now()-started)/1000, physicalState: profile.geography?.stateCode, county: profile.geography?.countyName, guidanceState: profile.excavation811?.state, statuses, facilities: profile.environment?.status === "error" ? null : profile.environment?.facilities.length, monitoringLocations: profile.water?.status === "error" ? null : profile.water?.nearbySites.length, weatherForecast: profile.weather?.forecastStatus, weatherAlerts: profile.weather?.alertsStatus, elevationMeters: profile.terrain?.elevationMeters, soilMapUnit: profile.soil?.components[0]?.mapUnit },null,2));
+if (!profile.ok || !profile.address) { console.error('Census address lookup failed.'); process.exitCode=1; }
+else if (query.includes('Silver Hill') && (profile.geography?.stateCode !== 'MD' || profile.excavation811?.state !== 'MD')) { console.error('Physical-state regression.'); process.exitCode=1; }
+else if (['flood','environment','water','weather','terrain','soil'].some(key => profile[key]?.status === 'error') || profile.weather?.forecastStatus === 'error' || profile.weather?.alertsStatus === 'error') { console.error('One or more public sources unavailable. See statuses; no clean bill of health is inferred.'); process.exitCode=1; }

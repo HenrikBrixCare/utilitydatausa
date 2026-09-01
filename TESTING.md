@@ -1,86 +1,27 @@
-# UtilityDataUSA Testing
+# UtilityDataUSA testing
 
-## Testing principle
+## Deterministic release checks
 
-A successful Next.js build is not enough for a product that depends on external public sources. UtilityDataUSA tests both the application and the current source endpoints.
+Run `npm ci`, `npm test`, `npm run typecheck` and `npm run build`. GitHub Actions repeats these checks on pull requests and main, using Node 24 and the lockfile.
 
-## Pull-request and main checks
+Regression fixtures exercise the meaningful failure modes: a Washington DC mailing address physically located in Maryland; unavailable geography; six-decimal USGS boxes; malformed source bodies; legacy-to-modern USGS fallback; FEMA missing numeric values; independently failed NWS forecast and alert requests; an empty successful alert feed; forecast URL host validation; USDA missing attributes; malformed/oversize MCP inputs; origin/version validation; discovery and notifications.
 
-`.github/workflows/check.yml` runs on pull requests and pushes to `main`.
+No regression test needs a secret, calls a paid AI endpoint or assumes a permanent government data value. `scripts/load-typescript.mjs` uses the installed TypeScript compiler to load the local adapters and Next route handlers in Node.
 
-The workflow performs:
+## Real public-source check
 
-1. `npm install`
-2. `npm run typecheck`
-3. `npm run build`
-4. `node scripts/source-smoke.mjs`
+`node scripts/source-smoke.mjs` calls the same implemented aggregation as the product, using `4600 Silver Hill Rd, Washington, DC 20233` by default. `SMOKE_ADDRESS` can select another address. The default address must resolve physically to Maryland and produce Maryland 811 guidance.
 
-A change should not be merged while typecheck, build or source smoke checks are failing without an understood reason.
+The report includes geography, each source status, facility/monitoring counts, forecast/alert status, elevation and mapped soil unit. Missing optional EIA configuration and PHMSA/811 reference-only context are expected limitations. Census failures, wrong physical-state guidance, source errors or unavailable NWS components fail the health check. A failed external service is explicitly recorded; no zero count is interpreted as a clean finding.
 
-## Authoritative-source smoke checks
+`.github/workflows/check.yml` runs this check weekly on Monday at 07:00 UTC and via manual `workflow_dispatch`. It uploads `source-health.txt` for 30 days even after failure. GitHub schedules can be delayed and public-repository schedules may be disabled after extended inactivity. This is a GitHub source monitor, not a ChatGPT scheduled task or a guarantee of notification delivery.
 
-`scripts/source-smoke.mjs` currently checks:
+External checks are separated from deterministic release checks because federal services can rate-limit or be temporarily unavailable independently of a code change. Investigate and document failures; verify that the product preserves them.
 
-### Census
+## End-to-end release verification
 
-Uses the fixed demo address:
+After a deployment, confirm the exact revision is READY, then check the home page, source catalog, readiness and MCP initialize/tools/list. Submit the Maryland demo address and confirm physical-state guidance, independent source states and bounded completion. Check a second address to avoid a demo-only success. Verify malformed queries and disallowed Origin headers do not trigger source work.
 
-`4600 Silver Hill Rd, Washington, DC 20233`
+For AI verification, use the existing configured server-side integration, confirm that the displayed evidence matches the returned profile, and check that unavailable sources remain unavailable in the interpretation. Do not run paid AI repeatedly as part of CI.
 
-The test requires the U.S. Census Geocoder to return at least one address match.
-
-### FEMA
-
-Uses the known demo coordinates and queries the NFHL Flood Hazard Zones layer. The test requires a valid ArcGIS JSON response without a service error.
-
-The test does not require a particular flood zone, because regulatory map data can legitimately change over time.
-
-### EPA
-
-Runs a small Facility Registry Service radius request. The test verifies that the endpoint returns a JSON object.
-
-The test deliberately avoids asserting a fixed facility count because registry contents can change.
-
-### USGS
-
-Runs a bounded site-service request and requires the expected RDB field headers, including `agency_cd` and `site_no`.
-
-The test does not require a fixed number of monitoring sites.
-
-## Why smoke tests avoid fixed findings
-
-UtilityDataUSA must verify that a source is usable without freezing real-world government data into brittle test expectations. A source can update its legitimate findings without breaking CI.
-
-The tests therefore validate connectivity and response shape, while the application preserves the live result and its limitations at runtime.
-
-## Runtime failure semantics
-
-Each downstream adapter returns its own state:
-
-- `ok` — source responded with usable data
-- `no_data` — source responded successfully but no relevant feature/site was returned
-- `error` — source could not be reached or did not return a usable response
-- `limited` — the platform provides a follow-up route rather than authoritative address evidence
-- `planned` — connector is not live
-
-`error` and `no_data` must never be treated as equivalent.
-
-## Vercel preview gate
-
-Every pull request also creates a Vercel preview deployment. The preferred release path is:
-
-`feature branch -> GitHub checks -> Vercel preview -> merge -> production deployment`
-
-This keeps untested source or UI changes away from the production address workflow.
-
-## Manual release check
-
-Before a challenge recording or important release:
-
-1. Open the production site.
-2. Run the demo address.
-3. Confirm the matched Census address appears.
-4. Confirm FEMA, EPA and USGS cards each show an explicit state rather than hanging indefinitely.
-5. Confirm the 811 card says follow-up and does not imply excavation clearance.
-6. Confirm electric utility remains planned until its adapter is actually validated.
-7. Confirm agent tools expose the same source states and limitations as the human UI.
+Manually verify desktop/mobile rendering, source links, JSON export and print layout before a public demonstration. Browser WebMCP registration is host-dependent; remote MCP does not depend on browser WebMCP support.

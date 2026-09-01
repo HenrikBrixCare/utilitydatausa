@@ -8,6 +8,9 @@ export const metadata: Metadata = {
 };
 
 const tools = [
+  { title: "Weather & Alerts", id: "get_weather_context", text: "NWS forecasts and independently checked alerts." },
+  { title: "Terrain Elevation", id: "get_elevation_context", text: "USGS 3DEP elevation, resolution and source acquisition date." },
+  { title: "Soil Survey", id: "get_soil_context", text: "USDA map-unit components and recorded drainage/hydrologic properties." },
   { title: "UtilityDataUSA Context", id: "get_utilitydatausa_context", text: "Returns the product context, source boundaries and important safety limitations." },
   { title: "Find U.S. Address", id: "find_us_address", text: "Resolves a submitted U.S. address through the same Census address workflow used by the site." },
   { title: "Address Profile", id: "get_address_profile", text: "Returns the normalized profile across all currently connected and public-context sources." },
@@ -27,7 +30,7 @@ export default function DevelopersPage() {
       <SiteHeader active="/developers" />
       <section className="product-page-hero"><div className="portal-container">
         <div><span className="product-page-eyebrow">API & Developers</span><h1>One address layer for people, software and agents.</h1><p>The human interface and the agent interface are built around the same normalized address profile and the same source boundaries. UtilityDataUSA does not create a separate “AI truth” disconnected from the underlying public evidence.</p></div>
-        <aside className="product-page-hero-card"><strong>Agent-ready by design.</strong><p>The current architecture exposes read-only WebMCP tools where supported and keeps source status, evidence and limitations explicit.</p><div className="value-metric"><b>11</b><span>Current WebMCP tools</span></div><div className="value-metric"><b>1</b><span>Normalized address-profile model</span></div><div className="value-metric"><b>✓</b><span>Original sources preserved</span></div></aside>
+        <aside className="product-page-hero-card"><strong>Agent-ready by design.</strong><p>The current architecture exposes read-only WebMCP tools where supported and keeps source status, evidence and limitations explicit.</p><div className="value-metric"><b>14</b><span>Current WebMCP tools</span></div><div className="value-metric"><b>1</b><span>Normalized address-profile model</span></div><div className="value-metric"><b>✓</b><span>Original sources preserved</span></div></aside>
       </div></section>
 
       <section className="product-section white"><div className="portal-container">
@@ -40,6 +43,7 @@ export default function DevelopersPage() {
         <div className="developer-code">U.S. address · Census match · geography · source adapters · public context · normalized evidence · human UI + WebMCP tools</div>
       </div></section>
 
+      <section className="product-section white"><div className="portal-container"><div className="product-section-head"><span className="product-page-eyebrow">Connect your software</span><h2>Public API and remote MCP.</h2><p>The remote MCP endpoint exposes 11 read-only source tools over stateless Streamable HTTP. Supported protocol versions: 2025-11-25, 2025-06-18 and 2025-03-26. Browser WebMCP exposes 14 tools, including the separately limited AI action.</p></div><div className="developer-code">MCP endpoint: /api/mcp<br />Address profile: GET /api/webmcp/address-profile?q=YOUR_ADDRESS</div><div className="product-cta-row"><a className="product-button secondary" href="/api/openapi">OpenAPI specification</a><a className="product-button secondary" href="/api/sources">Source catalog JSON</a><a className="product-button secondary" href="/api/health">Application readiness</a></div><p>These public endpoints have request limits and no service-level guarantee. Check every source status. The MCP endpoint does not call paid AI, create tickets or write private records.</p></div></section>
       <section className="product-section soft"><div className="portal-container">
         <div className="product-section-head"><span className="product-page-eyebrow">Current WebMCP tools</span><h2>Read-only, source-aware tools.</h2><p>Human-friendly names are shown first. The exact tool IDs remain visible for developers and agent integrations.</p></div>
         <div className="developer-grid tool-grid">{tools.map((tool) => <article className="developer-card tool-card" key={tool.id}><h3>{tool.title}</h3><code className="tool-id">{tool.id}</code><p>{tool.text}</p></article>)}</div>

@@ -8,13 +8,16 @@ export const metadata: Metadata = {
 };
 
 const coverageRows = [
+  { family: "Weather & alerts", source: "NWS / NOAA", scope: "NWS coverage areas", status: "Live", cls: "status-live", note: "Forecasts and active alerts checked independently. An unavailable alert feed never means no alerts." },
+  { family: "Terrain elevation", source: "USGS 3DEP", scope: "Mapped U.S. terrain", status: "Live", cls: "status-live", note: "Model elevation, resolution and acquisition date. Not a surveyed building elevation." },
+  { family: "Soil survey", source: "USDA NRCS", scope: "Available soil surveys", status: "Live", cls: "status-live", note: "Map-unit components and recorded soil properties. Not a site investigation or design recommendation." },
   { family: "Address & geography", source: "U.S. Census Bureau", scope: "Nationwide base", status: "Live", cls: "status-live", note: "Street-address match, coordinates and Census county/state geography." },
   { family: "Flood context", source: "FEMA NFHL", scope: "Nationwide source", status: "Live", cls: "status-live", note: "Flood-zone context where the relevant FEMA polygon data is returned." },
   { family: "Environmental screening", source: "U.S. EPA FRS", scope: "Nationwide source", status: "Live", cls: "status-live", note: "Nearby regulated or program-linked facility screening." },
   { family: "Water monitoring", source: "U.S. Geological Survey", scope: "Nationwide source", status: "Live", cls: "status-live", note: "Nearby hydrologic monitoring context around the matched address." },
   { family: "811 excavation safety", source: "State one-call systems", scope: "State-aware handoff", status: "Follow-up", cls: "status-followup", note: "Routes the user toward the required state one-call process. It does not replace 811." },
-  { family: "Electric utility context", source: "EIA / EIA-861", scope: "County + state context", status: "Public context", cls: "status-context", note: "Census county/state geography is connected to official EIA context. EIA-861 territory data does not prove the provider at a specific street address." },
-  { family: "Pipeline context", source: "PHMSA / NPMS", scope: "County / ZIP public context", status: "Public context", cls: "status-context", note: "Official NPMS viewer and operator context are connected. Never presented as exact underground line locating." },
+  { family: "Electric utility context", source: "EIA / EIA-861", scope: "County + state context", status: "Public context", cls: "status-context", note: "Official EIA references and optional state electricity prices when a server key is configured. No automatic supplier/service-territory lookup is performed." },
+  { family: "Pipeline context", source: "PHMSA / NPMS", scope: "County / ZIP public context", status: "Public context", cls: "status-context", note: "Official viewer and operator-directory links. No pipeline geometry or records are automatically retrieved." },
   { family: "State & local data", source: "States, counties, cities", scope: "Local expansion", status: "Expanding", cls: "status-expanding", note: "GIS, assessor, utility and municipal availability differs by location." },
   { family: "Zoning & permits", source: "Local authorities", scope: "Local expansion", status: "Expanding", cls: "status-expanding", note: "Added source by source with geographic scope and limitations declared." }
 ];
@@ -34,7 +37,7 @@ export default function DataCoveragePage() {
           </div>
 
           <aside className="coverage-scoreboard" aria-label="Current coverage summary">
-            <div><strong>4</strong><span>Live national data families</span></div>
+            <div><strong>7</strong><span>Connected data families</span></div>
             <div><strong>2</strong><span>Connected public-context families</span></div>
             <div><strong>1</strong><span>State-aware safety handoff</span></div>
             <div><strong>2</strong><span>Expanding local areas</span></div>
@@ -61,7 +64,7 @@ export default function DataCoveragePage() {
           <div className="coverage-layers" aria-label="Coverage layers">
             <div className="coverage-layer national">
               <div className="coverage-layer-label"><small>FOUNDATION</small><strong>National public-data layer</strong></div>
-              <div className="coverage-layer-track"><span>Census</span><span>FEMA</span><span>EPA</span><span>USGS</span></div>
+              <div className="coverage-layer-track"><span>Census</span><span>FEMA</span><span>EPA</span><span>USGS</span><span>NWS</span><span>USDA</span></div>
               <b>LIVE</b>
             </div>
             <div className="coverage-layer state">
@@ -83,7 +86,7 @@ export default function DataCoveragePage() {
           <div className="product-section-head">
             <span className="product-page-eyebrow">Coverage matrix</span>
             <h2>What each data family means today.</h2>
-            <p>This is the operational view: source family, geographic pattern, current product status and the role it can safely play.</p>
+            <p>This lists deployed connector capabilities. Actual availability and coverage are checked separately for every address; a live connector can still return no records or a source error.</p>
           </div>
 
           <div className="coverage-matrix" role="table" aria-label="UtilityDataUSA coverage matrix">

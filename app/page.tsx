@@ -44,10 +44,10 @@ export default function Home() {
           <div className="product-section-head">
             <span className="product-page-eyebrow">Current product foundation</span>
             <h2>Live data plus public context from one starting address.</h2>
-            <p>The current profile combines Census address/geography, FEMA flood context, EPA facility screening and USGS water monitoring with EIA electric-utility context, PHMSA/NPMS pipeline context and state-aware 811 safety follow-up.</p>
+            <p>The current profile combines Census address/geography, FEMA flood context, EPA facility screening, USGS water monitoring and terrain elevation, USDA soil surveys and NWS weather/alerts with EIA electric-utility context, PHMSA/NPMS pipeline context and state-aware 811 safety follow-up.</p>
           </div>
           <div className="coverage-grid">
-            <article className="coverage-card"><span className="status-pill status-live">Live</span><h3>Address · Flood · Environment · Water</h3><p>Census, FEMA, EPA and USGS provide the live national foundation around the matched address.</p></article>
+            <article className="coverage-card"><span className="status-pill status-live">Live</span><h3>Address · Flood · Environment · Water · Weather · Ground</h3><p>Census, FEMA, EPA, USGS, NWS and USDA supply independent source results around the matched address; each lookup reports its actual availability.</p></article>
             <article className="coverage-card"><span className="status-pill status-context">Public context</span><h3>Electric utilities · Pipelines</h3><p>EIA and PHMSA add useful geographic context with stricter limits on what can be claimed at address level.</p></article>
             <article className="coverage-card"><span className="status-pill status-followup">Safety handoff</span><h3>811 excavation guidance</h3><p>UtilityDataUSA points users toward the required state one-call process. It never replaces an 811 ticket or field locating.</p></article>
           </div>

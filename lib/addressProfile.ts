@@ -1,3 +1,6 @@
+import { boundingBox, finiteNumber } from "./geography";
+import { fetchSource } from "./sourceFetch";
+
 export type SourceStatus = "ok" | "no_data" | "error" | "limited" | "planned";
 
 export type AddressMatch = {
@@ -31,6 +34,7 @@ export type WaterSite = {
 
 export type WaterContext = {
   status: SourceStatus;
+  completeness?: "complete" | "limited";
   nearbySites: WaterSite[];
   sourceUrl: string;
   limitation: string;
@@ -90,17 +94,8 @@ type CensusMatch = {
   addressComponents?: Record<string, string>;
 };
 
-const USER_AGENT = "UtilityDataUSA/0.2 (+https://utilitydatausa.vercel.app)";
-
-async function fetchWithTimeout(url: string | URL, init: RequestInit = {}, timeoutMs = 9000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
-}
+const USER_AGENT = "UtilityDataUSA/0.5 (+https://utilitydatausa.com)";
+const fetchWithTimeout = fetchSource;
 
 export async function geocodeAddress(query: string): Promise<AddressMatch[]> {
   const endpoint = new URL("https://geocoding.geo.census.gov/geocoder/locations/onelineaddress");
@@ -111,10 +106,11 @@ export async function geocodeAddress(query: string): Promise<AddressMatch[]> {
   const response = await fetchWithTimeout(endpoint, {
     headers: { Accept: "application/json", "User-Agent": USER_AGENT },
     cache: "no-store"
-  });
+  }, 12000);
   if (!response.ok) throw new Error(`census_${response.status}`);
 
   const data = await response.json() as { result?: { addressMatches?: CensusMatch[] } };
+  if (!Array.isArray(data?.result?.addressMatches)) throw new Error("invalid_census_schema");
   return (data.result?.addressMatches ?? []).flatMap((match) => {
     const latitude = match.coordinates?.y;
     const longitude = match.coordinates?.x;
@@ -140,14 +136,7 @@ function value(attributes: Record<string, unknown>, ...keys: string[]) {
   return null;
 }
 
-function asNumber(input: unknown) {
-  if (typeof input === "number" && Number.isFinite(input)) return input;
-  if (typeof input === "string") {
-    const parsed = Number(input);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return null;
-}
+const asNumber = finiteNumber;
 
 export async function getFloodContext(latitude: number, longitude: number): Promise<FloodContext> {
   const sourceUrl = "https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/28";
@@ -174,7 +163,8 @@ export async function getFloodContext(latitude: number, longitude: number): Prom
       });
       if (!response.ok) continue;
       const data = await response.json() as { features?: Array<{ attributes?: Record<string, unknown> }>; error?: unknown };
-      if (data.error) continue;
+      if (data.error || !Array.isArray(data.features)) continue;
+      if (data.features.length && !data.features[0]?.attributes) continue;
       const attributes = data.features?.[0]?.attributes;
       if (!attributes) {
         return {
@@ -229,12 +219,9 @@ function haversineMiles(lat1: number, lon1: number, lat2: number, lon2: number) 
 export async function getWaterContext(latitude: number, longitude: number): Promise<WaterContext> {
   const sourceUrl = "https://waterservices.usgs.gov/nwis/site/";
   try {
-    const latDelta = 0.08;
-    const longitudeFactor = Math.max(0.25, Math.cos(latitude * Math.PI / 180));
-    const lonDelta = Math.min(0.2, latDelta / longitudeFactor);
     const endpoint = new URL(sourceUrl);
     endpoint.searchParams.set("format", "rdb");
-    endpoint.searchParams.set("bBox", `${longitude - lonDelta},${latitude - latDelta},${longitude + lonDelta},${latitude + latDelta}`);
+    endpoint.searchParams.set("bBox", boundingBox(latitude, longitude));
     endpoint.searchParams.set("siteStatus", "active");
     endpoint.searchParams.set("siteOutput", "basic");
 
@@ -245,16 +232,8 @@ export async function getWaterContext(latitude: number, longitude: number): Prom
     if (!response.ok) throw new Error(`usgs_${response.status}`);
     const text = await response.text();
     const rows = text.split(/\r?\n/).filter((line) => line.trim() && !line.startsWith("#"));
-    if (rows.length < 3) {
-      return {
-        status: "no_data",
-        nearbySites: [],
-        sourceUrl,
-        limitation: "No active USGS hydrologic monitoring sites were returned in the nearby search box. This is not a statement about water service, water quality, groundwater availability, or flood safety."
-      };
-    }
-
-    const headers = rows[0].split("\t");
+    const headers = (rows[0] ?? "").split("\t");
+    if (!["site_no", "station_nm", "dec_lat_va", "dec_long_va"].every(key => headers.includes(key))) throw new Error("invalid_usgs_schema");
     const dataRows = rows.slice(2);
     const getIndex = (name: string) => headers.indexOf(name);
     const sites = dataRows.flatMap((line) => {
@@ -279,12 +258,32 @@ export async function getWaterContext(latitude: number, longitude: number): Prom
       limitation: "USGS sites are hydrologic monitoring locations, not a map of water mains, drinking-water ownership, or service availability."
     };
   } catch {
-    return {
-      status: "error",
-      nearbySites: [],
-      sourceUrl,
-      limitation: "USGS Water Services could not be reached for this lookup."
-    };
+    return getModernWaterContext(latitude, longitude);
+
+  }
+}
+
+async function getModernWaterContext(latitude: number, longitude: number): Promise<WaterContext> {
+  const sourceUrl = "https://api.waterdata.usgs.gov/ogcapi/v0/collections/monitoring-locations/items";
+  try {
+    const url = new URL(sourceUrl);
+    url.searchParams.set("f", "json"); url.searchParams.set("bbox", boundingBox(latitude, longitude));
+    url.searchParams.set("agency_code", "USGS"); url.searchParams.set("limit", "50");
+    const key = process.env.USGS_API_KEY;
+    const response = await fetchSource(url, { headers: key ? { "X-Api-Key": key } : {} }, 10000);
+    if (!response.ok) throw new Error("usgs_modern_unavailable");
+    const data = await response.json();
+    if (!Array.isArray(data.features)) throw new Error("invalid_usgs_schema");
+    const sites: WaterSite[] = data.features.flatMap((feature: { properties?: Record<string, unknown>; geometry?: { coordinates?: unknown[] } }) => {
+      const p = feature.properties ?? {}; const coordinates = feature.geometry?.coordinates ?? [];
+      const lon = finiteNumber(coordinates[0]); const lat = finiteNumber(coordinates[1]);
+      if (lon === null || lat === null || !p.monitoring_location_number || p.agency_code !== "USGS") return [];
+      return [{ siteNumber: String(p.monitoring_location_number), name: String(p.monitoring_location_name ?? "USGS monitoring location"), siteType: String(p.site_type_code ?? ""), latitude: lat, longitude: lon, distanceMiles: haversineMiles(latitude, longitude, lat, lon) }];
+    });
+    sites.sort((a, b) => a.distanceMiles - b.distanceMiles);
+    return { status: sites.length ? "limited" : "no_data", completeness: "limited", nearbySites: sites.slice(0, 5), sourceUrl: url.href, limitation: "Modern USGS monitoring-location metadata is shown because the legacy active-site service was unavailable. Current activity is not confirmed. Up to five locations from the first 50 records are shown, so this is not an exhaustive nearest-site search. These are not water-service or water-quality findings." };
+  } catch {
+    return { status: "error", nearbySites: [], sourceUrl, limitation: "Both USGS monitoring-location services were unavailable. No water or monitoring conclusion can be drawn." };
   }
 }
 
@@ -322,8 +321,15 @@ export async function getEnvironmentalContext(latitude: number, longitude: numbe
     }, 12000);
     if (!response.ok) throw new Error(`epa_${response.status}`);
     const data: unknown = await response.json();
+    if (data === null || typeof data !== "object" || (!Array.isArray(data) && Object.keys(data).some(key => /error/i.test(key)))) throw new Error("invalid_epa_response");
     const rawFacilities: Array<Record<string, unknown>> = [];
     collectFacilityObjects(data, rawFacilities);
+    if (!rawFacilities.length) {
+      const root = data as Record<string, unknown>;
+      const results = (root.Results ?? root.results) as Record<string, unknown> | unknown[] | undefined;
+      const collection = Array.isArray(data) ? data : Array.isArray(results) ? results : results?.FRSFacility ?? results?.facilities ?? root.FRSFacility;
+      if (!Array.isArray(collection) || collection.length) throw new Error("invalid_epa_schema");
+    }
 
     const seen = new Set<string>();
     const facilities = rawFacilities.flatMap((item) => {
@@ -375,10 +381,10 @@ export function get811Guidance(state: string | null): ExcavationContext {
   };
 }
 
-export async function getAddressProfile(query: string): Promise<AddressProfile> {
+export async function getAddressProfile(query: string, resolvedAddress?: AddressMatch): Promise<AddressProfile> {
   const generatedAt = new Date().toISOString();
   try {
-    const matches = await geocodeAddress(query);
+    const matches = resolvedAddress ? [resolvedAddress] : await geocodeAddress(query);
     const address = matches[0] ?? null;
     if (!address) {
       return {
@@ -404,7 +410,6 @@ export async function getAddressProfile(query: string): Promise<AddressProfile> 
       getEnvironmentalContext(address.latitude, address.longitude),
       getWaterContext(address.latitude, address.longitude)
     ]);
-    const state = address.addressComponents.state ?? address.addressComponents.STATE ?? null;
 
     return {
       ok: true,
@@ -413,7 +418,7 @@ export async function getAddressProfile(query: string): Promise<AddressProfile> 
       flood,
       environment,
       water,
-      excavation811: get811Guidance(state),
+      excavation811: get811Guidance(null),
       energy: {
         status: "planned",
         sourceUrl: "https://www.eia.gov/opendata/",

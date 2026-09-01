@@ -1,135 +1,76 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getExpandedAddressProfile } from "../../../lib/expandedAddressProfile";
-import { getDataSources } from "../../../lib/dataSources";
-
+import { getExpandedAddressProfile } from "@/lib/expandedAddressProfile";
+import { getDataSources } from "@/lib/dataSources";
+import { normalizeQuery, rateLimit, readSmallJson, validOrigin } from "@/lib/apiGuard";
 export const dynamic = "force-dynamic";
-
-const PROTOCOL_VERSION = "2026-07-28";
-
-const querySchema = {
-  type: "object",
-  properties: {
-    query: { type: "string", minLength: 3, description: "U.S. street address, preferably including city, state and ZIP code." }
-  },
-  required: ["query"],
-  additionalProperties: false
-};
-
-const tools = [
-  {
-    name: "get_us_address_profile",
-    title: "Get U.S. address profile",
-    description: "Build the UtilityDataUSA source-backed address profile from official public sources including Census, FEMA, EPA, USGS, NWS weather/alerts, 811 guidance, public PHMSA context and EIA context where configured.",
-    inputSchema: querySchema,
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
-  },
-  {
-    name: "get_us_weather_context",
-    title: "Get U.S. weather and alert context",
-    description: "Return National Weather Service forecast and active-alert context for a matched U.S. address. This is current weather context, not a property-condition or engineering determination.",
-    inputSchema: querySchema,
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
-  },
-  {
-    name: "list_utilitydatausa_sources",
-    title: "List UtilityDataUSA sources",
-    description: "List the official public data sources and their current live/limited/planned status in UtilityDataUSA.",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
-  }
+export const maxDuration = 60;
+const versions = ["2025-11-25", "2025-06-18", "2025-03-26"];
+const querySchema = { type: "object", properties: { query: { type: "string", minLength: 3, maxLength: 250, description: "U.S. street address, city, state and ZIP." } }, required: ["query"], additionalProperties: false };
+const definitions = [
+  ["get_us_address_profile", "Get U.S. address profile", "All connected source results with independent status and limitations.", ""],
+  ["get_us_weather_context", "Get NWS weather and alerts", "Weather forecasts and alerts; unavailable alerts do not mean no alerts.", "weather"],
+  ["get_us_flood_context", "Get FEMA flood context", "Point-based flood-hazard context, not flood clearance.", "flood"],
+  ["get_us_environment_context", "Get EPA facility screening", "Nearby regulated facilities, not a contamination determination.", "environment"],
+  ["get_us_water_context", "Get USGS monitoring locations", "Hydrologic monitoring locations, not drinking-water service.", "water"],
+  ["get_us_elevation_context", "Get USGS terrain elevation", "3DEP terrain-model height, not a survey or elevation certificate.", "terrain"],
+  ["get_us_soil_context", "Get USDA soil-survey context", "Mapped soil components, not a site investigation or design recommendation.", "soil"],
+  ["get_us_energy_context", "Get EIA energy context", "Optional state price enrichment; no address-level supplier confirmation.", "energy"],
+  ["get_us_pipeline_context", "Get public pipeline references", "Official PHMSA links, not pipeline positions or automated pipeline search.", "pipeline"],
+  ["get_us_811_guidance", "Get physical-state 811 guidance", "Follow-up based on geographic state; no ticket creation or digging clearance.", "excavation811"],
+  ["list_utilitydatausa_sources", "List data sources", "Deployed connector capabilities; each lookup reports actual availability.", "sources"]
 ];
-
-type RpcMessage = {
-  jsonrpc?: string;
-  id?: string | number | null;
-  method?: string;
-  params?: Record<string, unknown>;
-};
-
-function result(id: RpcMessage["id"], value: unknown) {
-  return { jsonrpc: "2.0", id: id ?? null, result: value };
+const toolDefinitions = definitions.map(([name, title, description, field]) => ({ name, title, description, inputSchema: field === "sources" ? { type: "object", properties: {}, additionalProperties: false } : querySchema, annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } }));
+const rpcError = (id: unknown, code: number, message: string) => ({ jsonrpc: "2.0", id: id ?? null, error: { code, message } });
+const rpcResult = (id: unknown, result: unknown) => ({ jsonrpc: "2.0", id, result });
+function headers(request: NextRequest) {
+  const origin = request.headers.get("origin");
+  return { "Cache-Control": "no-store", "Vary": "Origin", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, MCP-Protocol-Version, Accept", ...(origin && validOrigin(request) ? { "Access-Control-Allow-Origin": origin } : {}) };
 }
-
-function error(id: RpcMessage["id"], code: number, message: string) {
-  return { jsonrpc: "2.0", id: id ?? null, error: { code, message } };
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: validOrigin(request) ? 204 : 403, headers: headers(request) });
 }
-
-function toolResult(value: unknown) {
-  return { content: [{ type: "text", text: JSON.stringify(value) }], structuredContent: value, isError: false };
+export async function GET(request: NextRequest) {
+  return new NextResponse(null, { status: validOrigin(request) ? 405 : 403, headers: { ...headers(request), Allow: "POST, OPTIONS" } });
 }
-
-function queryFrom(args: Record<string, unknown>) {
-  const query = typeof args.query === "string" ? args.query.replace(/\s+/g, " ").trim().slice(0, 200) : "";
-  if (query.length < 3) throw new Error("Address query must contain at least 3 characters.");
-  return query;
-}
-
-async function callTool(name: string, args: Record<string, unknown>) {
-  if (name === "list_utilitydatausa_sources") return getDataSources();
-  if (name === "get_us_address_profile") return getExpandedAddressProfile(queryFrom(args));
-  if (name === "get_us_weather_context") {
-    const profile = await getExpandedAddressProfile(queryFrom(args));
-    return {
-      ok: profile.ok,
-      query: profile.query,
-      address: profile.address,
-      weather: profile.weather,
-      limitation: profile.weather?.limitation ?? profile.limitation
-    };
-  }
-  throw new Error(`Unknown tool: ${name}`);
-}
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "content-type,mcp-protocol-version",
-  "Access-Control-Allow-Methods": "POST,OPTIONS",
-  "Cache-Control": "no-store"
-};
-
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: corsHeaders });
-}
-
 export async function POST(request: NextRequest) {
-  let message: RpcMessage;
+  const reply = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: headers(request) });
+  if (!validOrigin(request)) return reply(rpcError(null, -32000, "Invalid Origin."), 403);
+  const version = request.headers.get("mcp-protocol-version");
+  if (version && !versions.includes(version)) return reply(rpcError(null, -32600, "Unsupported protocol version."), 400);
+  const blocked = rateLimit(request, "mcp", 60); if (blocked) return blocked;
+  let input: unknown;
+  try { input = await readSmallJson(request); }
+  catch { return reply(rpcError(null, -32700, "Expected a JSON request no larger than 8 KiB."), 400); }
+  if (!input || typeof input !== "object" || Array.isArray(input)) return reply(rpcError(null, -32600, "Invalid request."), 400);
+  const message = input as Record<string, unknown>;
+  const { id, method } = message;
+  if (message.jsonrpc !== "2.0" || typeof method !== "string" || (id !== undefined && typeof id !== "string" && typeof id !== "number")) return reply(rpcError(null, -32600, "Invalid request."), 400);
+  if (id === undefined) return method.startsWith("notifications/") ? new NextResponse(null, { status: 202, headers: headers(request) }) : reply(rpcError(null, -32600, "Request id required."), 400);
+  const params = message.params;
+  if (params !== undefined && (!params || typeof params !== "object" || Array.isArray(params))) return reply(rpcError(id, -32602, "Invalid params."));
+  const p = (params ?? {}) as Record<string, unknown>;
+  if (method === "initialize") return reply(rpcResult(id, { protocolVersion: typeof p.protocolVersion === "string" && versions.includes(p.protocolVersion) ? p.protocolVersion : versions[0], capabilities: { tools: {} }, serverInfo: { name: "UtilityDataUSA", version: "0.5.0" }, instructions: "Preserve every source status and limitation. Mailing state can differ from physical jurisdiction. These tools cannot issue an 811 ticket or authorize excavation." }));
+  if (method === "ping") return reply(rpcResult(id, {}));
+  if (method === "tools/list") return reply(rpcResult(id, { tools: toolDefinitions }));
+  if (method !== "tools/call") return reply(rpcError(id, -32601, "Method not found."));
+  const definition = definitions.find(([name]) => name === p.name);
+  if (!definition) return reply(rpcError(id, -32602, "Unknown tool."));
+  const args = p.arguments ?? {};
+  if (!args || typeof args !== "object" || Array.isArray(args)) return reply(rpcError(id, -32602, "Arguments must be an object."));
+  const a = args as Record<string, unknown>;
+  const field = definition[3];
+  if (Object.keys(a).some(k => k !== "query") || (field === "sources" && Object.keys(a).length)) return reply(rpcError(id, -32602, "Unexpected arguments."));
+  const query = field === "sources" ? null : normalizeQuery(a.query);
+  if (field !== "sources" && !query) return reply(rpcError(id, -32602, "Address must contain 3–250 characters."));
   try {
-    message = await request.json() as RpcMessage;
-  } catch {
-    return NextResponse.json(error(null, -32700, "Parse error."), { status: 400, headers: corsHeaders });
-  }
-
-  if (message.jsonrpc !== "2.0" || typeof message.method !== "string") {
-    return NextResponse.json(error(message.id, -32600, "Invalid JSON-RPC request."), { status: 400, headers: corsHeaders });
-  }
-
-  if (message.id == null && message.method.startsWith("notifications/")) {
-    return new NextResponse(null, { status: 202, headers: corsHeaders });
-  }
-
-  try {
-    if (message.method === "initialize") {
-      return NextResponse.json(result(message.id, {
-        protocolVersion: typeof message.params?.protocolVersion === "string" ? message.params.protocolVersion : PROTOCOL_VERSION,
-        capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: "UtilityDataUSA MCP", version: "2026.08.29" },
-        instructions: "Read-only public-source address intelligence. Keep source limitations visible; never present the tools as a substitute for 811, field locating, engineering, surveying, permits, title work or authoritative utility-owner records."
-      }), { headers: corsHeaders });
+    let value: unknown; let isError = false;
+    if (field === "sources") value = { sources: await getDataSources() };
+    else {
+      const profile = await getExpandedAddressProfile(query!);
+      const part = field ? profile[field as keyof typeof profile] : profile;
+      isError = !profile.ok || (!!part && typeof part === "object" && "status" in part && part.status === "error");
+      value = field ? { ok: profile.ok, query: profile.query, address: profile.address, geography: profile.geography, generatedAt: profile.generatedAt, [field]: part, limitation: profile.limitation } : profile;
     }
-
-    if (message.method === "ping") return NextResponse.json(result(message.id, {}), { headers: corsHeaders });
-    if (message.method === "tools/list") return NextResponse.json(result(message.id, { tools }), { headers: corsHeaders });
-
-    if (message.method === "tools/call") {
-      const name = typeof message.params?.name === "string" ? message.params.name : "";
-      const args = message.params?.arguments && typeof message.params.arguments === "object" ? message.params.arguments as Record<string, unknown> : {};
-      if (!tools.some((tool) => tool.name === name)) return NextResponse.json(error(message.id, -32601, `Unknown tool: ${name}`), { status: 404, headers: corsHeaders });
-      const value = await callTool(name, args);
-      return NextResponse.json(result(message.id, toolResult(value)), { headers: corsHeaders });
-    }
-
-    return NextResponse.json(error(message.id, -32601, `Method not found: ${message.method}`), { status: 404, headers: corsHeaders });
-  } catch (err) {
-    return NextResponse.json(error(message.id, -32000, err instanceof Error ? err.message : "Tool execution failed."), { headers: corsHeaders });
-  }
+    return reply(rpcResult(id, { content: [{ type: "text", text: JSON.stringify(value) }], structuredContent: value, isError }));
+  } catch { return reply(rpcResult(id, { content: [{ type: "text", text: "Source request failed. No conclusion is available." }], isError: true })); }
 }

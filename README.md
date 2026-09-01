@@ -1,82 +1,64 @@
 # UtilityDataUSA
 
-**One address. One utility data view.**
+**One address. Public evidence with its limits intact.**
 
-UtilityDataUSA is an AI- and WebMCP-ready U.S. utility, property, environmental and risk-data platform being developed by BrixCare.
+UtilityDataUSA is BrixCare’s U.S. address research application. It combines public agency APIs, original-source links, optional AI interpretation and read-only agent tools. The existing production application is hosted at https://utilitydatausa.vercel.app. The intended custom domain is `utilitydatausa.com`; its hosting/DNS connection is a separate deployment task.
 
-The product idea is simple: people and agents should not need to know which federal agency, state portal, county GIS site, utility website or excavation system to visit first. They start with an address; UtilityDataUSA resolves the location, selects relevant sources, normalizes the evidence and preserves source limitations.
+## Implemented capabilities
 
-## Current status
+- Census address matching and coordinate-based state/county geography. Physical jurisdiction, not the mailing state, controls 811 and energy context.
+- FEMA NFHL flood context, EPA FRS facility screening, and nearby USGS water-monitoring locations, with a modern USGS fallback.
+- NWS forecasts and independently checked alerts, USGS 3DEP terrain elevation, and USDA soil-survey map-unit components. These public APIs work without a paid subscription or embedded demo key.
+- Optional EIA state residential electricity prices when `EIA_API_KEY` is configured. EIA-861 and PHMSA are official references; no address-level serving utility or pipeline positions are claimed.
+- Address evidence UI with source status, source links, physical-state warning, JSON download, shareable search link and print layout.
+- OpenAI structured interpretation using the existing server-side integration, explicitly invoked by the user. The AI response includes the exact profile it analyzed.
+- 14 browser WebMCP tools and 11 remote MCP tools at `/api/mcp`. Remote MCP does not invoke paid AI.
+- Source catalog `/api/sources`, OpenAPI document `/api/openapi`, and readiness `/api/health`.
 
-### Live
+“Implemented” describes connector capability, not uninterrupted upstream availability. Each lookup distinguishes returned data, no records, unavailable sources and limited context. An empty or failed lookup never proves a property is risk-free.
 
-- Next.js 15 / React 19 application on Vercel.
-- Dedicated UtilityDataUSA Supabase project, isolated from the other BrixCare products.
-- U.S. Census Bureau address geocoding.
-- FEMA National Flood Hazard Layer point lookup.
-- EPA Facility Registry Service nearby-facility screening.
-- USGS Water Services nearby active hydrologic monitoring-site lookup.
-- State-aware 811 follow-up guidance that explicitly does **not** replace the official 811 process.
-- Multi-source human address-profile UI.
-- Browser WebMCP tools registered through `document.modelContext` when supported.
-- GitHub Actions typecheck, production build and authoritative-source smoke tests.
+## Development and checks
 
-### Deliberately still planned
+Node 24 matches the Vercel project. No private key is needed to run the public-source features.
 
-- EIA + state/local electric utility service-territory adapter.
-- County parcel/property adapters.
-- Selected state, county, city, water/sewer and public-utility-commission adapters.
-- AI interpretation layer after a dedicated OpenAI Platform project/key is configured securely.
-
-A connector is never labeled live merely because an agency has an API. It becomes live only after an adapter is implemented and smoke-tested.
-
-## Architecture
-
-`U.S. address -> Census location -> parallel public-source adapters -> normalized evidence -> human UI + WebMCP tools`
-
-See [ARCHITECTURE.md](ARCHITECTURE.md).
-
-## Live WebMCP tools
-
-- `get_utilitydatausa_context`
-- `find_us_address`
-- `get_address_profile`
-- `get_flood_context`
-- `get_environment_screening`
-- `get_water_context`
-- `get_811_guidance`
-- `list_authoritative_sources`
-
-All current tools are read-only decision-support tools.
-
-## Data sources
-
-See [DATA_SOURCES.md](DATA_SOURCES.md) for the live/planned source matrix, official endpoints and source-specific limitations.
-
-## Challenge material
-
-- [CHALLENGE_PLAN.md](CHALLENGE_PLAN.md) — positioning and definition of done.
-- [CHALLENGE_DEMO.md](CHALLENGE_DEMO.md) — concise human + agent demo flow.
-- [TESTING.md](TESTING.md) — CI and source-smoke strategy.
-- [WEBMCP_SECURITY.md](WEBMCP_SECURITY.md) — tool safety and trust boundaries.
-
-## Safety boundary
-
-UtilityDataUSA is decision support. It is not a replacement for state 811 / one-call notification, utility field locating, engineering design, surveys, permits, title work, environmental due diligence or authoritative utility-owner records. Public-source data and service-territory approximations must never be represented as exact underground line locations.
-
-## Development
-
-```bash
-npm install
+```sh
+npm ci
 npm run dev
-```
-
-Checks:
-
-```bash
+npm test
 npm run typecheck
 npm run build
 node scripts/source-smoke.mjs
 ```
 
-Production target: Vercel.
+`npm test` exercises source parsing, physical jurisdiction, independent forecast/alert failures, input validation and MCP behavior with deterministic fixtures. The smoke command calls the actual adapters and reports external service availability. See [TESTING.md](TESTING.md).
+
+GitHub Actions runs deterministic checks for pull requests and main. A separate weekly source check runs Monday at 07:00 UTC, and can also be started manually. It saves a source-health report and fails visibly if a live source cannot be checked. Public-source outages are not disguised as successful checks.
+
+## Configuration
+
+Copy `.env.example` to `.env.local` only when optional integrations are needed. Keep all real keys out of git and browser code.
+
+| Variable | Purpose |
+| --- | --- |
+| `OPENAI_API_KEY` | Existing optional AI interpretation; server only |
+| `EIA_API_KEY` | Optional free EIA state electricity price enrichment |
+| `USGS_API_KEY` | Optional higher quota for the modern USGS fallback |
+
+The deployed source catalog comes from `lib/dataSources.ts`, so an old database catalog cannot mislabel a newly deployed connector. The dedicated Supabase project remains available for future authenticated history; this release does not write address searches to it.
+
+## Interfaces
+
+```sh
+curl -s https://utilitydatausa.vercel.app/api/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"example","version":"1.0"}}}'
+```
+
+MCP uses stateless HTTP POST with JSON responses. Supported protocol versions: `2025-11-25`, `2025-06-18`, `2025-03-26`. No SSE subscription, sessions, write tools or OAuth flow is advertised. Browser WebMCP requires a host implementing `document.modelContext`; ordinary browsers can use the full human UI.
+
+Details: [ARCHITECTURE.md](ARCHITECTURE.md), [DATA_SOURCES.md](DATA_SOURCES.md), [WEBMCP_SECURITY.md](WEBMCP_SECURITY.md), [FINAL_CHECKLIST.md](FINAL_CHECKLIST.md).
+
+## Limits
+
+UtilityDataUSA does not locate underground lines, identify a property’s serving utility, issue 811 tickets, provide excavation clearance, or replace surveys, engineering, permitting or environmental due diligence. State/local parcel, zoning, permit and utility territory adapters remain future work requiring jurisdiction-specific validation. This is an implemented research application, not complete nationwide utility infrastructure coverage.
