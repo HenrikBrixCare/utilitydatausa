@@ -4,7 +4,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 const nativeRequire = createRequire(import.meta.url);
 const root = path.resolve(import.meta.dirname, '..');
-export function createLoader() {
+export function createLoader(overrides = {}) {
   const cache = new Map();
   function load(file) {
     const full = path.resolve(root, file);
@@ -12,6 +12,8 @@ export function createLoader() {
     const output = ts.transpileModule(fs.readFileSync(full, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
     const module = { exports: {} }; cache.set(full, module);
     function localRequire(name) {
+      if (name === 'server-only') return {};
+      if (Object.hasOwn(overrides, name)) return overrides[name];
       if (name.startsWith('.') || name.startsWith('@/')) {
         const base = name.startsWith('@/') ? path.join(root, name.slice(2)) : path.resolve(path.dirname(full), name);
         return load([base, base+'.ts', base+'.tsx'].find(p => fs.existsSync(p) && fs.statSync(p).isFile()));

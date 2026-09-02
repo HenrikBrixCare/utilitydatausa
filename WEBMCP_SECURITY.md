@@ -2,7 +2,7 @@
 
 ## Read-only remote MCP
 
-`/api/mcp` exposes 11 read-only tools through stateless HTTP POST JSON-RPC. Supported versions are explicitly negotiated. GET returns 405; notifications return 202 without a JSON-RPC response. Invalid input, unknown tools, unsupported version headers and unapproved browser origins produce controlled errors. Tool responses preserve structured evidence and source limitations. Remote MCP has no paid AI, writes, ticket creation, permits, purchases or messages.
+`/api/mcp` exposes 11 read-only tools through stateless HTTP POST JSON-RPC. Supported versions are explicitly negotiated. GET returns 405; notifications return 202 without a JSON-RPC response. Invalid input, unknown tools, unsupported version headers and unapproved browser origins produce controlled errors. Tool responses preserve structured evidence and source limitations. Remote MCP has no paid AI, caller-controlled database writes, ticket creation, permits, purchases or messages.
 
 Browser WebMCP exposes 14 tools when `document.modelContext` is available, including explicit AI interpretation. AI is not called by ordinary source-profile tools.
 
@@ -19,11 +19,11 @@ Browser WebMCP exposes 14 tools when `document.modelContext` is available, inclu
 
 Per-process limits: 30 source requests/minute/client, 60 MCP requests/minute/client and 3 AI requests/10 minutes/client. Buckets are bounded. This is basic throttling, not a distributed quota or a guaranteed spend cap. Platform firewall/shared quotas remain a future operational requirement at scale.
 
-`OPENAI_API_KEY`, `EIA_API_KEY` and optional `USGS_API_KEY` stay server-side. `/api/health` exposes configuration booleans only. No private key is needed in browser code or MCP results. The existing Supabase RLS setup is preserved; this release does not write searches to it.
+`OPENAI_API_KEY`, `EIA_API_KEY` and optional `USGS_API_KEY` stay server-side. `/api/health` exposes configuration booleans and a live storage connectivity status. Supabase storage uses short-lived, verified Vercel production workload identity. The Supabase service key never leaves its runtime. Public profile/result privileges and storage-function execution are revoked for anon/authenticated roles. Remote MCP exposes no write operation; source lookups may populate the internal public-evidence cache.
 
 ## Data flow
 
-Addresses are sent to Census, coordinates to public-source APIs, and structured evidence to OpenAI only when AI interpretation is requested. OpenAI requests use `store:false`; this is not a blanket retention guarantee. Brief in-memory source caching, browser history and platform request logging are separate concerns. Shared search links contain the address.
+Addresses are sent to Census, coordinates to public-source APIs, and structured evidence to OpenAI only when AI interpretation is requested. OpenAI requests use `store:false`; this is not a blanket retention guarantee. Canonical public address evidence is retained in Supabase for 30 days; raw typed queries, account identity and AI outputs are not added to those records. Browser history and platform request logs are separate concerns. Saved report links carry a random token in a fragment; anyone given that token can reopen the snapshot until expiry. The token is not included in OpenAI input. An unsaved result falls back to a search link containing the address.
 
 ## Interpretation limits
 

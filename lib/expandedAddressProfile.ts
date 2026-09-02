@@ -1,8 +1,10 @@
 import { stateFromFips } from "./geography";
 import { fetchSource } from "./sourceFetch";
 import { getTerrainContext, getSoilContext, type TerrainContext, type SoilContext } from "./groundContext";
-import { getAddressProfile, geocodeAddress, get811Guidance, type AddressProfile, type AddressMatch } from "./addressProfile";
+import { geocodeAddress, getFloodContext, getEnvironmentalContext, getWaterContext, get811Guidance, type AddressProfile, type AddressMatch } from "./addressProfile";
 import { getWeatherContext, type WeatherContext } from "./weatherContext";
+import { canReuseSource, reuseDuration, type SourceKey, type ProfileFreshness, type ProfilePersistence } from "./profilePolicy";
+import { loadCachedProfile, profileCacheKey, saveProfile } from "./profileStore";
 
 type SourceStatus = "ok" | "no_data" | "error" | "limited" | "planned";
 
@@ -50,6 +52,8 @@ export type ExpandedAddressProfile = Omit<AddressProfile, "energy"> & {
   weather: WeatherContext | null;
   terrain: TerrainContext | null;
   soil: SoilContext | null;
+  sourceFreshness?: ProfileFreshness;
+  persistence?: ProfilePersistence;
 };
 
 const USER_AGENT = "UtilityDataUSA/0.5 (+https://utilitydatausa.com)";
@@ -227,32 +231,47 @@ function getPipelineContext(geography: CensusGeographyContext | null): PipelineC
   };
 }
 
-type CachedProfile = { expires: number; value: Promise<ExpandedAddressProfile> };
-const profileCache = new Map<string, CachedProfile>();
+const pendingProfiles = new Map<string, Promise<ExpandedAddressProfile>>();
 
-export function getExpandedAddressProfile(query: string): Promise<ExpandedAddressProfile> {
+export function getExpandedAddressProfile(query: string, options: { refresh?: boolean } = {}): Promise<ExpandedAddressProfile> {
   const normalized = query.replace(/\s+/g, " ").trim();
-  if (normalized.length < 3 || normalized.length > 250) throw new Error("invalid_query");
-  const key = normalized.toLowerCase();
-  const cached = profileCache.get(key);
-  if (cached && cached.expires > Date.now()) return cached.value;
-  if (profileCache.size >= 100) profileCache.delete(profileCache.keys().next().value!);
-  const value = buildProfile(normalized);
-  profileCache.set(key, { expires: Date.now() + 120_000, value });
-  void value.then(profile => {
-    if (!profile.ok || !profile.address) profileCache.delete(key);
-    else if ([profile.flood, profile.environment, profile.water, profile.weather, profile.terrain, profile.soil, profile.geography].some(s => s?.status === "error")) {
-      const entry = profileCache.get(key);
-      if (entry?.value === value) entry.expires = Date.now() + 15_000;
-    }
-  }).catch(() => profileCache.delete(key));
-  return value;
+  if (normalized.length < 3 || normalized.length > 250 || /[\x00-\x1f\x7f]/.test(normalized)) throw new Error("invalid_query");
+  const cacheKey = profileCacheKey(normalized);
+  const pendingKey = `${cacheKey}:${options.refresh === true}`;
+  let value = pendingProfiles.get(pendingKey);
+  if (!value) {
+    value = (async () => {
+      const cached = options.refresh ? null : await loadCachedProfile(cacheKey);
+      return buildProfile(normalized, cached, cacheKey);
+    })();
+    if (pendingProfiles.size < 100) pendingProfiles.set(pendingKey, value);
+    void value.finally(() => { if (pendingProfiles.get(pendingKey) === value) pendingProfiles.delete(pendingKey); }).catch(() => {});
+  }
+  return value.then(profile => ({ ...profile, query: normalized }));
 }
 
-async function buildProfile(query: string): Promise<ExpandedAddressProfile> {
+async function buildProfile(query: string, cached: ExpandedAddressProfile | null, cacheKey: string): Promise<ExpandedAddressProfile> {
+  const sourceFreshness: ProfileFreshness = {};
+  let refreshed = 0;
+  let reused = 0;
+  async function source<T>(key: SourceKey, oldValue: T, fetchValue: () => Promise<T>, allowReuse = true): Promise<T> {
+    if (allowReuse && canReuseSource(cached, key)) {
+      reused++;
+      sourceFreshness[key] = { ...cached!.sourceFreshness![key]!, reused: true };
+      return oldValue;
+    }
+    refreshed++;
+    const value = await fetchValue();
+    const now = Date.now();
+    sourceFreshness[key] = { fetchedAt: new Date(now).toISOString(), expiresAt: new Date(now + reuseDuration(key, value)).toISOString(), reused: false };
+    return value;
+  }
   let matches: AddressMatch[] = [];
   let failed = false;
-  try { matches = await geocodeAddress(query); } catch { failed = true; }
+  try {
+    const resolved = await source("census_geocoder", cached?.address ?? null, async () => (await geocodeAddress(query))[0] ?? null);
+    if (resolved) matches = [resolved];
+  } catch { failed = true; }
   const address = matches[0];
   if (!address) return {
     ok: !failed, query, address: null, flood: null, environment: null, water: null,
@@ -261,14 +280,32 @@ async function buildProfile(query: string): Promise<ExpandedAddressProfile> {
     ...(failed ? { error: "address_profile_unavailable" } : {}),
     limitation: failed ? "Census could not be reached. No location-based conclusion can be drawn." : "No Census match was found. Downstream sources were not queried."
   };
-  const geographyPromise = getCensusGeography(address);
-  const [base, geography, weather, terrain, soil, energy] = await Promise.all([
-    getAddressProfile(query, address), geographyPromise,
-    getWeatherContext(address.latitude, address.longitude),
-    getTerrainContext(address.latitude, address.longitude),
-    getSoilContext(address.latitude, address.longitude),
-    geographyPromise.then(getEnergyContext)
+  if (cached?.address?.latitude !== address.latitude || cached?.address?.longitude !== address.longitude) cached = null;
+  const geographyPromise = source("census_geography", cached?.geography ?? null, () => getCensusGeography(address));
+  const [flood, environment, water, geography, weather, terrain, soil, energy] = await Promise.all([
+    source("fema_flood", cached?.flood ?? null, () => getFloodContext(address.latitude, address.longitude)),
+    source("epa_environment", cached?.environment ?? null, () => getEnvironmentalContext(address.latitude, address.longitude)),
+    source("usgs_water", cached?.water ?? null, () => getWaterContext(address.latitude, address.longitude)),
+    geographyPromise,
+    source("nws_weather", cached?.weather ?? null, () => getWeatherContext(address.latitude, address.longitude)),
+    source("usgs_elevation", cached?.terrain ?? null, () => getTerrainContext(address.latitude, address.longitude)),
+    source("usda_soils", cached?.soil ?? null, () => getSoilContext(address.latitude, address.longitude)),
+    geographyPromise.then(geo => source("eia_energy", cached?.energy ?? null, () => getEnergyContext(geo),
+      geo?.stateCode === cached?.geography?.stateCode && geo?.countyFips === cached?.geography?.countyFips))
   ]);
-  return { ...base, geography, energy, pipeline: getPipelineContext(geography), weather, terrain, soil,
-    excavation811: get811Guidance(geography?.stateCode ?? null) };
+  const pipeline = getPipelineContext(geography);
+  const excavation811 = get811Guidance(geography?.stateCode ?? null);
+  for (const [key, value] of [["phmsa_npms", pipeline], ["state_811", excavation811]] as const) {
+    const checked = sourceFreshness.census_geography?.fetchedAt ?? new Date().toISOString();
+    sourceFreshness[key] = { fetchedAt: checked, expiresAt: new Date(Date.parse(checked) + reuseDuration(key, value)).toISOString(), reused: sourceFreshness.census_geography?.reused ?? false };
+  }
+  if (!refreshed && cached?.persistence?.status === "saved") return { ...cached, query, sourceFreshness, persistence: { ...cached.persistence, mode: "cached" } };
+  const profile: ExpandedAddressProfile = {
+    ok: true, query, address, flood, environment, water, geography, energy: energy!, pipeline,
+    weather, terrain, soil, excavation811, generatedAt: new Date().toISOString(), sourceFreshness,
+    persistence: { status: "disabled", mode: reused ? "mixed" : "live" },
+    limitation: "UtilityDataUSA combines public-source decision support. It is not a substitute for 811, field locating, engineering, surveying, title work, permitting, environmental due diligence, or authoritative utility-owner records."
+  };
+  profile.persistence = await saveProfile(cacheKey, profile);
+  return profile;
 }

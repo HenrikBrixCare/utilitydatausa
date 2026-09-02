@@ -18,6 +18,8 @@
 
 ## External or launch work still outstanding
 
+The persistent-evidence implementation adds Supabase profiles/source results, source-specific reuse, 30-day report links, forced refresh, OIDC workload authorization and database-outage fallback. User accounts and personal saved lists remain a separate feature; public snapshots are not account-owned records.
+
 - [ ] Attach `utilitydatausa.com` to the existing Vercel project and configure its registrar/DNS. Ownership was reported; the domain was absent from Vercel’s project domains at the audit.
 - [ ] Supply a verified EIA API key through the normal owner-controlled registration/configuration flow if electricity price enrichment is desired. No placeholder/demo key is used.
 - [ ] Add optional USGS higher-quota key if traffic requires it.

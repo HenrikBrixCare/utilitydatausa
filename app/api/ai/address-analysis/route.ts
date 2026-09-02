@@ -1,6 +1,7 @@
 import { normalizeQuery, validOrigin, rateLimit, readSmallJson } from "@/lib/apiGuard";
 import { NextRequest, NextResponse } from "next/server";
 import { getExpandedAddressProfile } from "@/lib/expandedAddressProfile";
+import { loadSavedProfile } from "@/lib/profileStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -81,7 +82,11 @@ export async function POST(request: NextRequest) {
   const query = normalizeQuery((body as { query?: unknown } | null)?.query);
   if (!query) return NextResponse.json({ ok: false, error: "invalid_query" }, { status: 400 });
 
-  const profile = await getExpandedAddressProfile(query);
+  const reportToken = (body as { reportToken?: unknown } | null)?.reportToken;
+  if (reportToken !== undefined && (typeof reportToken !== "string" || !/^[a-f0-9]{64}$/.test(reportToken))) return NextResponse.json({ ok: false, error: "invalid_report_token" }, { status: 400 });
+  const saved = typeof reportToken === "string" ? await loadSavedProfile(reportToken) : null;
+  if (saved && saved.status !== "ok") return NextResponse.json({ ok: false, error: saved.status === "not_found" ? "saved_report_not_found" : "saved_reports_unavailable" }, { status: saved.status === "not_found" ? 404 : 503 });
+  const profile = saved?.status === "ok" ? saved.profile : await getExpandedAddressProfile(query);
   if (!profile.ok || !profile.address) {
     return NextResponse.json({
       ok: false,
@@ -104,6 +109,7 @@ export async function POST(request: NextRequest) {
     energy: profile.energy,
     pipeline: profile.pipeline,
     generatedAt: profile.generatedAt,
+    sourceFreshness: profile.sourceFreshness,
     overallLimitation: profile.limitation
   };
 
@@ -140,6 +146,7 @@ export async function POST(request: NextRequest) {
           "NWS forecastStatus and alertsStatus are independent; an alert-source error never means no alerts. Soil map units and terrain models are not site-specific engineering measurements.",
           "Never invent a utility owner, underground line position, service availability, contamination finding, flood conclusion, permit status, property title fact, or excavation clearance.",
           "Preserve source errors and no-data states exactly: unavailable data is not a negative finding.",
+          "This may be a historical saved report. Use sourceFreshness fetchedAt timestamps, do not call old weather alerts current, and never claim that evidence was rechecked now.",
           "FEMA is flood-hazard context; EPA FRS is facility screening; USGS sites are monitoring locations; none of these alone proves property-level conditions.",
           "EIA-861 county/state service-territory context does not prove which electric utility serves a specific address. A state residential price is an average, not a property tariff or bill.",
           "PHMSA NPMS public context excludes gas distribution and gathering lines, is not exact pipeline locating, and must never be interpreted as evidence that a specific address is clear of pipelines.",
