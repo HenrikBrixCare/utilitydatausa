@@ -1,1 +1,44 @@
-.source-evidence-link{display:block;margin-top:1rem;font-weight:650;font-size:.9rem;color:#174d76;text-decoration:underline;text-underline-offset:3px}.evidence-actions{display:flex;gap:.75rem;flex-wrap:wrap;margin:1.5rem 0}.evidence-actions button{border:1px solid #8cabbf;background:#fff;border-radius:6px;padding:.65rem 1rem;color:#163c56;font:inherit;cursor:pointer}.evidence-legend{font-size:.95rem;line-height:1.6;color:#435e70;margin-bottom:1.5rem;max-width:85ch}.search-progress{font-size:.875rem;min-height:1.2rem;margin:.75rem 0 0}.live-result-card{overflow-wrap:anywhere}.live-result-card>small{display:block;line-height:1.6;margin-top:1rem}.live-result-card a{color:#165981;text-decoration:underline;text-underline-offset:3px}.live-profile-heading h2{overflow-wrap:anywhere}.result-card-top{display:flex;gap:.6rem;flex-wrap:wrap;justify-content:space-between;align-items:flex-start}.result-card-top strong{flex:1 1 140px;font-size:.8rem;line-height:1.4}.result-card-top em{flex:0 0 auto;font-size:.65rem;white-space:nowrap}.live-result-card>small{font-size:.75rem}.live-profile-section button:disabled{opacity:.65;cursor:wait}@media(max-width:700px){.live-profile-heading{display:block}.live-profile-heading>button{margin-top:1rem}.live-result-grid.expanded-result-grid{grid-template-columns:1fr}.hero-search-row{flex-wrap:wrap}.hero-search-row input{min-width:0;width:100%}.hero-search-row button{width:100%}.live-result-card{padding:1.25rem}.evidence-actions button{flex:1 1 auto}}@media print{header,nav,footer,.portal-topbar,.portal-hero,.evidence-actions,.ai-action-button,.home-main,.portal-footer,.product-section{display:none!important}.live-profile-section{width:100%;max-width:none;padding:0}.live-result-grid{display:block!important}.live-result-card{break-inside:avoid;margin:0 0 1rem;box-shadow:none;border:1px solid #999}.live-ai-panel{break-before:page}body{background:white!important;color:black!important}a{color:inherit!important}.portal-container{max-width:none}}
+.source-evidence-link{display:block;margin-top:1rem;font-weight:650;font-size:.9rem;color:#174d76;text-decoration:underline;text-underline-offset:3px}.evidence-actions{display:flex;gap:.75rem;flex-wrap:wrap;margin:1.5rem 0}.evidence-actions button{border:1px solid #8cabbf;background:#fff;border-radius:6px;padding:.65rem 1rem;color:#163c56;font:inherit;cursor:pointer}.evidence-legend{font-size:.95rem;line-height:1.6;color:#435e70;margin-bottom:1.5rem;max-width:85ch}.search-progress{font-size:.875rem;min-height:1.2rem;margin:.75rem 0 0}.live-result-card{overflow-wrap:anywhere}.live-result-card>small{display:block;line-height:1.6;margin-top:1rem}.live-result-card a{color:#165981;text-decoration:underline;text-underline-offset:3px}.live-profile-heading h2{overflow-wrap:anywhere}.result-card-top{display:flex;gap:.6rem;flex-wrap:wrap;justify-content:space-between;align-items:flex-start}.result-card-top strong{flex:1 1 140px;font-size:.8rem;line-height:1.4}.result-card-top em{flex:0 0 auto;font-size:.65rem;white-space:nowrap}.live-result-card>small{font-size:.75rem}.live-profile-section button:disabled{opacity:.65;cursor:wait}@media(max-width:700px){.live-profile-heading{display:block}.live-profile-heading>button{margin-top:1rem}.live-result-grid.expanded-result-grid{grid-template-columns:1fr}.hero-search-row{flex-wrap:wrap}.hero-search-row input{min-width:0;width:100%}.hero-search-row button{width:100%}.live-result-card{padding:1.25rem}.evidence-actions button{flex:1 1 auto}}
+/* Nested weather notes are not card footers. */
+.live-result-card p small { display: inline; margin: 0; padding: 0; border: 0; }
+.report-brand, .report-overflow { display: none; }
+
+@media print {
+  @page { size: A4; margin: 15mm; }
+  header, nav, footer, .public-data-bar, .portal-topbar, .portal-hero,
+  .evidence-actions, .ai-action-button, .home-main, .portal-footer,
+  .product-section { display: none !important; }
+  html, body, .product-page, .live-profile-section {
+    background: #fff !important; color: #172e46 !important;
+  }
+  .portal-container, .live-profile-section {
+    width: 100% !important; max-width: none !important;
+    margin: 0 !important; padding: 0 !important;
+  }
+  .report-brand { display: block !important; margin: 0 0 10pt; font-weight: 700; font-size: 13pt; }
+  .live-profile-heading { display: block !important; }
+  .live-profile-heading h2 { font-size: 18pt !important; line-height: 1.25; }
+  .live-result-grid { display: block !important; }
+  .live-result-card {
+    display: block !important; position: static !important;
+    transform: none !important; transition: none !important;
+    min-height: 0 !important; height: auto !important;
+    margin: 0 0 12pt !important; padding: 12pt !important;
+    background: #fff !important; box-shadow: none !important;
+    border: 1px solid #b3c0cb !important;
+    break-inside: avoid; page-break-inside: avoid;
+    overflow: visible !important;
+  }
+  .live-result-card::before, .live-result-card::after { content: none !important; display: none !important; }
+  .result-card-top { display: flex !important; justify-content: space-between; gap: 10pt; }
+  .result-card-top strong { font-size: 10pt !important; }
+  .result-card-top em { font-size: 8pt !important; padding: 3pt 5pt; }
+  .live-result-card h3 { font-size: 13pt !important; margin: 10pt 0 5pt; }
+  .live-result-card p, .live-result-card > small { font-size: 9pt !important; line-height: 1.5 !important; }
+  .live-result-card p small { font-size: 8.5pt !important; }
+  .report-overflow { display: block !important; }
+  .live-result-card a { color: #173a59 !important; text-decoration: underline; }
+  .context-links a { background: transparent !important; box-shadow: none !important; }
+  .live-ai-panel { break-before: page; }
+  .profile-bottom-limitation { font-size: 9pt !important; line-height: 1.5 !important; }
+}
