@@ -9,7 +9,8 @@
 - [x] NWS independent forecasts/alerts, USGS elevation, USDA soil survey.
 - [x] Optional EIA state price adapter; honest PHMSA and EIA-861 references.
 - [x] Existing OpenAI interpretation with returned evidence alignment.
-- [x] Source links, evidence JSON export, shared search link and print styles.
+- [x] Source links, evidence JSON export, saved report links, refresh and print styles.
+- [x] Supabase production save/reopen verified with immutable snapshots and source reuse.
 - [x] 14 browser WebMCP tools and 11 remote read-only MCP tools.
 - [x] Public source catalog, OpenAPI document and readiness endpoint.
 - [x] Input/body/origin checks, basic rate limiting and bounded caching.
