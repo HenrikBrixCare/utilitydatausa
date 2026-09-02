@@ -1,0 +1,4 @@
+[functions.address-profile-store]
+# Vercel workload JWTs are verified in auth.ts before every database operation.
+# Supabase's gateway verifier only understands Supabase JWTs.
+verify_jwt = false

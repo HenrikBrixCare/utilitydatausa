@@ -1,23 +1,26 @@
 {
   "name": "utilitydatausa",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": false,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/regression-tests.mjs"
+    "test": "node scripts/regression-tests.mjs && node scripts/storage-tests.mjs"
   },
   "dependencies": {
+    "@vercel/oidc": "3.8.5",
     "next": "15.5.25",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "server-only": "0.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "jose": "6.2.10",
     "typescript": "^5.7.0"
   }
 }

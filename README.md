@@ -44,7 +44,17 @@ Copy `.env.example` to `.env.local` only when optional integrations are needed. 
 | `EIA_API_KEY` | Optional free EIA state electricity price enrichment |
 | `USGS_API_KEY` | Optional higher quota for the modern USGS fallback |
 
-The deployed source catalog comes from `lib/dataSources.ts`, so an old database catalog cannot mislabel a newly deployed connector. The dedicated Supabase project remains available for future authenticated history; this release does not write address searches to it.
+The deployed source catalog comes from `lib/dataSources.ts`, so an old database catalog cannot mislabel a newly deployed connector. Supabase now stores successful canonical address profiles and their individual source results. The raw typed query, user identity and AI output are not stored in those profiles.
+
+### Address storage
+
+Production connects to the dedicated Supabase project's `address-profile-store` Edge Function with Vercel's short-lived OIDC workload identity. No permanent database key is copied into Vercel. The function verifies signature, expiry, issuer, audience, team ID, project ID and the production environment before it can call the database. Preview and local builds do live lookups without production database access.
+
+Saved evidence is retained for 30 days. “Copy saved report link” shares the exact snapshot using a random 256-bit token in a URL fragment. Anyone with that link can view its public address evidence. Opening a snapshot never silently updates its data; “Refresh data” performs a new lookup and creates a separate report. Each source shows its original check time. This is shared public evidence, not a personal account/history feature.
+
+Freshness limits: weather 1 minute; water monitoring 30 minutes; FEMA/EPA 1 hour; Census geography/geocoding and EIA 1 day; terrain/soil 7 days. Completed no-data results and partial water results have at most 5 minutes of reuse. Failed source checks and partial weather failures are retried. Manual refresh bypasses every cache. Database failure leaves live search available and clearly marks the result unsaved.
+
+Apply `supabase/address-storage.sql` and deploy `supabase/functions/address-profile-store` before deploying the application. The SQL is additive for the original three tables, installs a daily retention job and restricts table/function access. A 300 MiB logical evidence budget stops new saves while live search remains available. This conservatively counts each uncompressed snapshot twice plus row overhead; physical database size still needs monitoring. Deleting expired rows releases the logical budget. `SUPABASE_PROFILE_STORAGE_DISABLED=1` is an optional emergency switch. `/api/health` performs a real database round trip and reports `integrations.supabaseStorage`.
 
 ## Interfaces
 
