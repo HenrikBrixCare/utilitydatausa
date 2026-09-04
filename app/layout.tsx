@@ -14,6 +14,7 @@ import "./resource-footer-polish.css";
 import "./accessibility.css";
 import "./evidence.css";
 import WebMCPTools from "./components/WebMCPTools";
+import NetworkPageViewTracker from "./components/NetworkPageViewTracker";
 
 const siteUrl = "https://utilitydatausa.com";
 
@@ -93,6 +94,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en-US">
       <body>
+        <NetworkPageViewTracker />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
         <WebMCPTools />
         {children}
